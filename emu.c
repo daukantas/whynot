@@ -46,7 +46,7 @@ typedef struct {
     };
     uint16_t sp, pc;
 
-    uint8_t ff50;
+    uint8_t ram[0x10000];
 } cpu_t;
 
 void dump(cpu_t const *cpu) {
@@ -116,6 +116,7 @@ char const *REG16N(int s) {
 }
 
 void SET8(cpu_t *cpu, uint16_t addr, uint8_t v) {
+    cpu->ram[addr] = v;
 }
 
 int main(int argc, char **argv) {
@@ -131,7 +132,7 @@ int main(int argc, char **argv) {
 
     cpu_t cpu;
     cpu.pc = 0;
-    cpu.ff50 = 0;
+    cpu.ram[0xff50] = 0;
 
     dump(&cpu);
 
@@ -152,15 +153,38 @@ int main(int argc, char **argv) {
             v |= rom[cpu.pc++] << 8;
             printf("LD %s,$%04x\n", REG16N((b >> 4) & 0x3), v);
             SREG16(&cpu, (b >> 4) & 0x3, v);
+
+            // no flags set
         } else if ((b & 0xf8) == 0xa8) {
             // XOR r
             printf("XOR %s\n", REG8N(b & 0x7));
             cpu.a = cpu.a ^ REG8(&cpu, b & 0x7);
+
+            cpu.f = 0;
             cpu.fz = cpu.a == 0;
         } else if (b == 0x32) {
             // LD (HLD), A
             printf("LD (HLD), A\n");
             SET8(&cpu, cpu.hl--, cpu.a);
+
+            // no flags set
+        } else if (b == 0xcb) {
+            b = rom[cpu.pc++];
+            if ((b & 0xc0) == 0x40) {
+                // BIT b, r
+                uint8_t bit = (b >> 3) & 0x7,
+                        r = b & 0x7;
+                printf("BIT %d,%s\n", bit, REG8N(r));
+
+                cpu.fz = ((REG8(&cpu, r) >> bit) & 0x1) == 0;
+                cpu.fn = 0;
+                cpu.fh = 1;
+
+            }
+
+            fprintf(stderr, "unknown cb opcode: %x\n", b);
+            dump(&cpu);
+            return 1;
         } else {
             fprintf(stderr, "unknown opcode: %x\n", b);
             dump(&cpu);
