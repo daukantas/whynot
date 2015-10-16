@@ -44,7 +44,7 @@ void dump(cpu_t const *cpu) {
     printf("\n");
 }
 
-int REG(cpu_t const *cpu, int s) {
+uint8_t REG8(cpu_t const *cpu, int s) {
     switch (s) {
         case 0x7: return cpu->a;
         case 0x0: return cpu->b;
@@ -54,7 +54,57 @@ int REG(cpu_t const *cpu, int s) {
         case 0x4: return cpu->h;
         case 0x5: return cpu->l;
         default:
-            fprintf(stderr, "REG got %x\n", s);
+            fprintf(stderr, "REG8 got %x\n", s);
+            exit(1);
+    }
+}
+
+char const *REG8N(int s) {
+    switch (s) {
+        case 0x7: return "A";
+        case 0x0: return "B";
+        case 0x1: return "C";
+        case 0x2: return "D";
+        case 0x3: return "E";
+        case 0x4: return "H";
+        case 0x5: return "L";
+        default:
+            fprintf(stderr, "REG8N got %x\n", s);
+            exit(1);
+    }
+}
+
+void SREG16(cpu_t *cpu, int s, uint16_t v) {
+    switch (s) {
+        case 0x0:
+            cpu->b = (v >> 8);
+            cpu->c = v & 0xf;
+            break;
+        case 0x1:
+            cpu->d = (v >> 8);
+            cpu->e = v & 0xf;
+            break;
+        case 0x2:
+            cpu->h = (v >> 8);
+            cpu->l = v & 0xf;
+            break;
+        case 0x3:
+            cpu->sp = v;
+            break;
+        default:
+            fprintf(stderr, "SREG16 got %x\n", s);
+            exit(1);
+    }
+}
+
+char const *REG16N(int s) {
+    switch (s) {
+        case 0x0: return "BC";
+        case 0x1: return "DE";
+        case 0x2: return "HL";
+        case 0x3: return "SP";
+        default:
+            fprintf(stderr, "REG16N got %x\n", s);
             exit(1);
     }
 }
@@ -89,27 +139,14 @@ int main(int argc, char **argv) {
 
         if ((b & 0xcf) == 0x01) {
             // LD dd, nn
-            switch ((b >> 4) & 0x3) {
-                case 0x00:
-                    cpu.b = rom[cpu.pc++];
-                    cpu.c = rom[cpu.pc++];
-                    break;
-                case 0x01:
-                    cpu.d = rom[cpu.pc++];
-                    cpu.e = rom[cpu.pc++];
-                    break;
-                case 0x02:
-                    cpu.h = rom[cpu.pc++];
-                    cpu.l = rom[cpu.pc++];
-                    break;
-                case 0x03:
-                    cpu.sp = rom[cpu.pc++] << 8;
-                    cpu.sp |= rom[cpu.pc++];
-                    break;
-            }
+            uint16_t v = rom[cpu.pc++];
+            v |= rom[cpu.pc++] << 8;
+            printf("LD %s,$%04x\n", REG16N((b >> 4) & 0x3), v);
+            SREG16(&cpu, (b >> 4) & 0x3, v);
         } else if ((b & 0xf8) == 0xa8) {
             // XOR r
-            cpu.a = cpu.a ^ REG(&cpu, b & 0x7);
+            printf("XOR %s\n", REG8N(b & 0x7));
+            cpu.a = cpu.a ^ REG8(&cpu, b & 0x7);
             cpu.fz = cpu.a == 0;
         } else {
             fprintf(stderr, "unknown opcode: %x\n", b);
