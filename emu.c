@@ -115,6 +115,18 @@ char const *REG16N(int s) {
     }
 }
 
+char const *CCN(int s) {
+    switch (s) {
+        case 0x0: return "NZ";
+        case 0x1: return "Z";
+        case 0x2: return "NC";
+        case 0x3: return "C";
+        default:
+            fprintf(stderr, "CCN got %x\n", s);
+            exit(1);
+    }
+}
+
 void SET8(cpu_t *cpu, uint16_t addr, uint8_t v) {
     cpu->ram[addr] = v;
 }
@@ -179,12 +191,28 @@ int main(int argc, char **argv) {
                 cpu.fz = ((REG8(&cpu, r) >> bit) & 0x1) == 0;
                 cpu.fn = 0;
                 cpu.fh = 1;
+            } else {
+                fprintf(stderr, "unknown cb opcode: %x\n", b);
+                dump(&cpu);
+                return 1;
+            }
+        } else if ((b & 0xe7) == 0x20) {
+            // JR cc, e
+            uint8_t cc = (b >> 3) & 0x3;
+            int16_t e = (int16_t) ((int8_t) rom[cpu.pc++]) + 2;
+            printf("JR %s, %d\n", CCN(cc), e);
 
+            int do_jump = 0;
+            switch (cc) {
+                case 0x0: do_jump = !cpu.fz; break;
+                case 0x1: do_jump = cpu.fz; break;
+                case 0x2: do_jump = !cpu.fc; break;
+                case 0x3: do_jump = cpu.fc; break;
             }
 
-            fprintf(stderr, "unknown cb opcode: %x\n", b);
-            dump(&cpu);
-            return 1;
+            if (do_jump) {
+                cpu.pc += (-2) + e;
+            }
         } else {
             fprintf(stderr, "unknown opcode: %x\n", b);
             dump(&cpu);
