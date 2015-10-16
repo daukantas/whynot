@@ -17,7 +17,6 @@ int read_file(char const *filename, uint8_t **out, long *len) {
 typedef struct {
     uint8_t a;
     union {
-        uint8_t f;
         struct {
             unsigned int f0 : 4;
             unsigned int fc : 1;
@@ -25,8 +24,26 @@ typedef struct {
             unsigned int fn : 1;
             unsigned int fz : 1;
         };
+        uint8_t f;
     };
-    uint8_t b, c, d, e, h, l;
+    union {
+        struct {
+            uint8_t c, b;
+        };
+        uint16_t bc;
+    };
+    union {
+        struct {
+            uint8_t e, d;
+        };
+        uint16_t de;
+    };
+    union {
+       struct {
+          uint8_t l, h;
+       };
+       uint16_t hl;
+    };
     uint16_t sp, pc;
 
     uint8_t ff50;
@@ -76,21 +93,10 @@ char const *REG8N(int s) {
 
 void SREG16(cpu_t *cpu, int s, uint16_t v) {
     switch (s) {
-        case 0x0:
-            cpu->b = (v >> 8);
-            cpu->c = v & 0xf;
-            break;
-        case 0x1:
-            cpu->d = (v >> 8);
-            cpu->e = v & 0xf;
-            break;
-        case 0x2:
-            cpu->h = (v >> 8);
-            cpu->l = v & 0xf;
-            break;
-        case 0x3:
-            cpu->sp = v;
-            break;
+        case 0x0: cpu->bc = v; break;
+        case 0x1: cpu->de = v; break;
+        case 0x2: cpu->hl = v; break;
+        case 0x3: cpu->sp = v; break;
         default:
             fprintf(stderr, "SREG16 got %x\n", s);
             exit(1);
@@ -107,6 +113,9 @@ char const *REG16N(int s) {
             fprintf(stderr, "REG16N got %x\n", s);
             exit(1);
     }
+}
+
+void SET8(cpu_t *cpu, uint16_t addr, uint8_t v) {
 }
 
 int main(int argc, char **argv) {
@@ -148,6 +157,10 @@ int main(int argc, char **argv) {
             printf("XOR %s\n", REG8N(b & 0x7));
             cpu.a = cpu.a ^ REG8(&cpu, b & 0x7);
             cpu.fz = cpu.a == 0;
+        } else if (b == 0x32) {
+            // LD (HLD), A
+            printf("LD (HLD), A\n");
+            SET8(&cpu, cpu.hl--, cpu.a);
         } else {
             fprintf(stderr, "unknown opcode: %x\n", b);
             dump(&cpu);
