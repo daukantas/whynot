@@ -76,6 +76,21 @@ uint8_t REG8(cpu_t const *cpu, int s) {
     }
 }
 
+void SREG8(cpu_t *cpu, int s, uint8_t v) {
+    switch (s) {
+        case 0x7: cpu->a = v; break;
+        case 0x0: cpu->b = v; break;
+        case 0x1: cpu->c = v; break;
+        case 0x2: cpu->d = v; break;
+        case 0x3: cpu->e = v; break;
+        case 0x4: cpu->h = v; break;
+        case 0x5: cpu->l = v; break;
+        default:
+            fprintf(stderr, "SREG8 got %x\n", s);
+            exit(1);
+    }
+}
+
 char const *REG8N(int s) {
     switch (s) {
         case 0x7: return "A";
@@ -159,12 +174,21 @@ int main(int argc, char **argv) {
     while (1) {
         uint8_t b = rom[cpu.pc++];
 
-        if ((b & 0xcf) == 0x01) {
+        if ((b & 0xc7) == 0x06) {
+            // LD r, n
+            uint8_t r = (b >> 3) & 0x7;
+            uint8_t v = rom[cpu.pc++];
+            printf("LD %s,$%x\n", REG8N(r), v);
+            SREG8(&cpu, r, v);
+
+            // no flags set
+        } else if ((b & 0xcf) == 0x01) {
             // LD dd, nn
+            uint8_t r = (b >> 4) & 0x3;
             uint16_t v = rom[cpu.pc++];
             v |= rom[cpu.pc++] << 8;
-            printf("LD %s,$%04x\n", REG16N((b >> 4) & 0x3), v);
-            SREG16(&cpu, (b >> 4) & 0x3, v);
+            printf("LD %s,$%04x\n", REG16N(r), v);
+            SREG16(&cpu, r, v);
 
             // no flags set
         } else if ((b & 0xf8) == 0xa8) {
