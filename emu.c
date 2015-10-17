@@ -47,7 +47,7 @@ typedef struct {
     };
     uint16_t sp, pc;
 
-    uint8_t rom[0x100], ram[0x10000];
+    uint8_t rom[0x100], ram[0x10000], *cart;
 } cpu_t;
 
 void dump(cpu_t const *cpu) {
@@ -65,6 +65,9 @@ void dump(cpu_t const *cpu) {
 uint8_t GET8(cpu_t const *cpu, uint16_t addr) {
     if (addr < 0x100 && cpu->ram[0xff50] == 0x00) {
         return cpu->rom[addr];
+    }
+    if (addr < 0x8000) {
+        return cpu->cart[addr];
     }
     return cpu->ram[addr];
 }
@@ -195,6 +198,7 @@ int main(int argc, char **argv) {
 
     cpu_t cpu;
     memcpy(cpu.rom, rom, 256);
+    cpu.cart = cart;
     cpu.pc = 0;
     SET8(&cpu, 0xff50, 0);
     SET8(&cpu, 0xff44, 0x90);  // hack
