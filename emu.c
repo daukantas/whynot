@@ -163,6 +163,9 @@ int main(int argc, char **argv) {
 
     dump(&cpu);
 
+    int show_dis = 0;
+#define DIS if (show_dis)
+
     // A 111 7
     // B 000 0
     // C 001 1
@@ -172,35 +175,55 @@ int main(int argc, char **argv) {
     // L 101 5
 
     while (1) {
+        if (cpu.pc >= 0x14) {
+            show_dis = 1;
+        }
+
         uint8_t b = rom[cpu.pc++];
 
         if ((b & 0xc7) == 0x06) {
             // LD r, n
             uint8_t r = (b >> 3) & 0x7;
             uint8_t v = rom[cpu.pc++];
-            printf("LD %s,$%x\n", REG8N(r), v);
+            DIS { printf("LD %s,$%x\n", REG8N(r), v); }
             SREG8(&cpu, r, v);
 
             // no flags set
+        } else if (b == 0xe2) {
+            // LD ($FF00+C),A
+            DIS { printf("LD ($FF00+C),A\n"); }
+            SET8(&cpu, 0xff00 + cpu.c, cpu.a);
+
+            // no flags set
+        } else if ((b & 0xc7) == 0x04) {
+            // INC r
+            uint8_t r = (b >> 3) & 0x7;
+            DIS { printf("INC %s\n", REG8N(r)); }
+            uint8_t v = REG8(&cpu, r) + 1;
+            SREG8(&cpu, r, v);
+
+            cpu.fz = v == 0;
+            cpu.fn = 0;
+            cpu.fh = v == 0x10;
         } else if ((b & 0xcf) == 0x01) {
             // LD dd, nn
             uint8_t r = (b >> 4) & 0x3;
             uint16_t v = rom[cpu.pc++];
             v |= rom[cpu.pc++] << 8;
-            printf("LD %s,$%04x\n", REG16N(r), v);
+            DIS { printf("LD %s,$%04x\n", REG16N(r), v); }
             SREG16(&cpu, r, v);
 
             // no flags set
         } else if ((b & 0xf8) == 0xa8) {
             // XOR r
-            printf("XOR %s\n", REG8N(b & 0x7));
+            DIS { printf("XOR %s\n", REG8N(b & 0x7)); }
             cpu.a = cpu.a ^ REG8(&cpu, b & 0x7);
 
             cpu.f = 0;
             cpu.fz = cpu.a == 0;
         } else if (b == 0x32) {
             // LD (HLD), A
-            printf("LD (HLD), A\n");
+            DIS { printf("LD (HLD), A\n"); }
             SET8(&cpu, cpu.hl--, cpu.a);
 
             // no flags set
@@ -210,7 +233,7 @@ int main(int argc, char **argv) {
                 // BIT b, r
                 uint8_t bit = (b >> 3) & 0x7,
                         r = b & 0x7;
-                printf("BIT %d,%s\n", bit, REG8N(r));
+                DIS { printf("BIT %d,%s\n", bit, REG8N(r)); }
 
                 cpu.fz = ((REG8(&cpu, r) >> bit) & 0x1) == 0;
                 cpu.fn = 0;
@@ -224,7 +247,7 @@ int main(int argc, char **argv) {
             // JR cc, e
             uint8_t cc = (b >> 3) & 0x3;
             int16_t e = (int16_t) ((int8_t) rom[cpu.pc++]) + 2;
-            printf("JR %s, %d\n", CCN(cc), e);
+            DIS { printf("JR %s, %d\n", CCN(cc), e); }
 
             int do_jump = 0;
             switch (cc) {
