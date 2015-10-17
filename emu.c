@@ -73,6 +73,9 @@ uint8_t GET8(cpu_t const *cpu, uint16_t addr) {
 }
 
 void SET8(cpu_t *cpu, uint16_t addr, uint8_t v) {
+    if (addr == 0xff50 && v != 0) {
+        printf("DMG ROM overlay disabled\n");
+    }
     cpu->ram[addr] = v;
 }
 
@@ -209,7 +212,7 @@ int main(int argc, char **argv) {
 #define DIS if (show_dis)
 
     while (1) {
-        if (cpu.pc == 0x62 && !show_dis) {
+        if (cpu.pc == 0x0100 && !show_dis) {
             printf("...\n");
             show_dis = 1;
         }
@@ -420,6 +423,12 @@ int main(int argc, char **argv) {
                 dump(&cpu);
                 return 1;
             }
+        } else if (b == 0xc3) {
+            // JP nn
+            uint16_t v = GET8(&cpu, cpu.pc++);
+            v |= GET8(&cpu, cpu.pc++) << 8;
+            DIS { printf("JP $%04x\n", v); }
+            cpu.pc = v;
         } else if (b == 0x18) {
             // JR e
             int16_t e = (int16_t) ((int8_t) GET8(&cpu, cpu.pc++)) + 2;
