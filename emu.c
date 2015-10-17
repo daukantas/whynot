@@ -174,6 +174,13 @@ void PUSH16(cpu_t *cpu, uint16_t v) {
     SET8(cpu, cpu->sp + 1, (v >> 8) & 0xff);
 }
 
+uint16_t POP16(cpu_t *cpu) {
+    uint16_t v = GET8(cpu, cpu->sp + 1);
+    v = (v << 8) | GET8(cpu, cpu->sp);
+    cpu->sp += 2;
+    return v;
+}
+
 int main(int argc, char **argv) {
     uint8_t *rom, *cart;
     long romlen, cartlen;
@@ -271,6 +278,13 @@ int main(int argc, char **argv) {
             uint8_t qq = (b >> 4) & 0x3;
             DIS { printf("PUSH %s\n", REG16N(qq)); }
             PUSH16(&cpu, REG16(&cpu, qq));
+
+            // no flags set
+        } else if ((b & 0xcf) == 0xc1) {
+            // POP qq
+            uint8_t qq = (b >> 4) & 0x3;
+            DIS { printf("POP %s\n", REG16N(qq)); }
+            SREG16(&cpu, qq, POP16(&cpu));
 
             // no flags set
         } else if ((b & 0xcf) == 0x01) {
