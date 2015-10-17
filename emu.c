@@ -274,15 +274,6 @@ int main(int argc, char **argv) {
             cpu.a = GET8(&cpu, cpu.de);
 
             // no flags set
-        } else if (b == 0xcd) {
-            // CALL nn
-            uint16_t v = GET8(&cpu, cpu.pc++);
-            v |= GET8(&cpu, cpu.pc++) << 8;
-            DIS { printf("CALL $%04x\n", v); }
-            PUSH16(&cpu, cpu.pc);
-            cpu.pc = v;
-
-            // no flags set
         } else if ((b & 0xc0) == 0x40) {
             // LD r,r'
             uint8_t dst = (b >> 3) & 0x7,
@@ -392,6 +383,19 @@ int main(int argc, char **argv) {
             if (do_jump) {
                 cpu.pc += (-2) + e;
             }
+        } else if (b == 0xcd) {
+            // CALL nn
+            uint16_t v = GET8(&cpu, cpu.pc++);
+            v |= GET8(&cpu, cpu.pc++) << 8;
+            DIS { printf("CALL $%04x\n", v); }
+            PUSH16(&cpu, cpu.pc);
+            cpu.pc = v;
+
+            // no flags set
+        } else if (b == 0xc9) {
+            // RET
+            DIS { printf("RET\n"); }
+            cpu.pc = POP16(&cpu);
         } else {
             fprintf(stderr, "unknown opcode: %x\n", b);
             dump(&cpu);
