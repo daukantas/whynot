@@ -317,6 +317,16 @@ int main(int argc, char **argv) {
 
             cpu.f = 0;
             cpu.fz = cpu.a == 0;
+        } else if ((b & 0xf8) == 0xb8) {
+            // CP r
+            uint8_t r = b & 0x7;
+            DIS { printf("CP %s\n", REG8N(r)); }
+
+            uint8_t n = REG8(&cpu, r);
+            cpu.fz = cpu.a == n;
+            cpu.fn = 1;
+            cpu.fh = (((int) cpu.a & 0xf) - ((int) n & 0xf)) < 0;  // ?
+            cpu.fc = cpu.a > n;
         } else if (b == 0xfe) {
             // CP n
             uint8_t n = GET8(&cpu, cpu.pc++);
