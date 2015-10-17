@@ -10,8 +10,8 @@
 int run(cpu_t *cpu);
 int step(cpu_t *cpu);
 
-#define SCRH 160
-#define SCRW 144
+#define SCRW 160
+#define SCRH 144
 #define SCRSCALE 3
 
 int read_file(char const *filename, uint8_t **out, long *len) {
@@ -100,6 +100,17 @@ int run(cpu_t *cpu) {
             running = 0;
             retval = 1;
         }
+
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        glViewport(0, 0, SCRW * SCRSCALE, SCRH * SCRSCALE);
+
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glOrtho(0, SCRW, SCRH, 0, -1, 1);
+
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
     }
     return retval;
 }
