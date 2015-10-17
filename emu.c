@@ -303,6 +303,16 @@ int main(int argc, char **argv) {
             SREG16(&cpu, qq, POP16(&cpu));
 
             // no flags set
+        } else if ((b & 0xf8) == 0x80) {
+            // ADD A,r
+            uint8_t r = b & 0x7;
+            DIS { printf("ADD A,%s\n", REG8N(r)); }
+            uint8_t v = REG8(&cpu, r);
+            cpu.fh = (((cpu.a & 0xf) + (v & 0xf)) & 0x10) == 0x10;
+            cpu.fc = ((uint16_t) cpu.a) + ((uint16_t) v) > 0xff;
+            cpu.a += v;
+            cpu.fz = cpu.a == 0;
+            cpu.fn = 0;
         } else if ((b & 0xf8) == 0x90) {
             // SUB r
             uint8_t r = b & 0x7;
