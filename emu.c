@@ -107,6 +107,18 @@ char const *REG8N(int s) {
     }
 }
 
+uint16_t REG16(cpu_t *cpu, int s) {
+    switch (s) {
+        case 0x0: return cpu->bc;
+        case 0x1: return cpu->de;
+        case 0x2: return cpu->hl;
+        case 0x3: return cpu->sp;
+        default:
+            fprintf(stderr, "REG16 got %x\n", s);
+            exit(1);
+    }
+}
+
 void SREG16(cpu_t *cpu, int s, uint16_t v) {
     switch (s) {
         case 0x0: cpu->bc = v; break;
@@ -250,6 +262,13 @@ int main(int argc, char **argv) {
                     src = b & 0x7;
             DIS { printf("LD %s,%s\n", REG8N(dst), REG8N(src)); }
             SREG8(&cpu, dst, REG8(&cpu, src));
+
+            // no flags set
+        } else if ((b & 0xcf) == 0xc5) {
+            // PUSH qq
+            uint8_t qq = (b >> 4) & 0x3;
+            DIS { printf("PUSH %s\n", REG16N(qq)); }
+            PUSH16(&cpu, REG16(&cpu, qq));
 
             // no flags set
         } else if ((b & 0xcf) == 0x01) {
