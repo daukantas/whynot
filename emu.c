@@ -203,7 +203,7 @@ int main(int argc, char **argv) {
 #define DIS if (show_dis)
 
     while (1) {
-        if (cpu.pc >= 0x14 && !show_dis) {
+        if (cpu.pc == 0x40 && !show_dis) {
             printf("...\n");
             show_dis = 1;
         }
@@ -226,6 +226,15 @@ int main(int argc, char **argv) {
             SET8(&cpu, 0xff00 + cpu.c, cpu.a);
 
             // no flags set
+        } else if (b == 0xfe) {
+            // CP n
+            uint8_t n = GET8(&cpu, cpu.pc++);
+            DIS { printf("CP $%02x\n", n); }
+
+            cpu.fz = cpu.a == n;
+            cpu.fn = 1;
+            cpu.fh = (((int) cpu.a & 0xf) - ((int) n & 0xf)) < 0;  // ?
+            cpu.fc = cpu.a > n;
         } else if ((b & 0xc7) == 0x04) {
             // INC r
             uint8_t r = (b >> 3) & 0x7;
@@ -245,7 +254,7 @@ int main(int argc, char **argv) {
 
             cpu.fz = v == 0;
             cpu.fn = 1;
-            cpu.fh = (v & 0x8) == 0x8;  // ?
+            cpu.fh = (v & 0xf) == 0xf;
         } else if ((b & 0xcf) == 0x03) {
             // INC ss
             uint8_t r = (b >> 4) & 0x3;
@@ -294,6 +303,14 @@ int main(int argc, char **argv) {
             uint8_t qq = (b >> 4) & 0x3;
             DIS { printf("POP %s\n", REG16N(qq)); }
             SREG16(&cpu, qq, POP16(&cpu));
+
+            // no flags set
+        } else if (b == 0xea) {
+            // LD (nn),A
+            uint16_t v = GET8(&cpu, cpu.pc++);
+            v |= GET8(&cpu, cpu.pc++) << 8;
+            DIS { printf("LD ($%04x),A\n", v); }
+            SET8(&cpu, v, cpu.a);
 
             // no flags set
         } else if ((b & 0xcf) == 0x01) {
