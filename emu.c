@@ -175,7 +175,7 @@ int main(int argc, char **argv) {
         uint8_t b = rom[cpu.pc++];
 
         if ((b & 0xc7) == 0x06) {
-            // LD r, n
+            // LD r,n
             uint8_t r = (b >> 3) & 0x7;
             uint8_t v = rom[cpu.pc++];
             DIS { printf("LD %s,$%x\n", REG8N(r), v); }
@@ -199,12 +199,17 @@ int main(int argc, char **argv) {
             cpu.fn = 0;
             cpu.fh = v == 0x10;
         } else if ((b & 0xf8) == 0x70) {
-            // LD (HL), r
+            // LD (HL),r
             uint8_t r = b & 0x7;
             DIS { printf("LD (HL),%s\n", REG8N(r)); }
             SET8(&cpu, cpu.hl, REG8(&cpu, r));
+        } else if (b == 0xe0) {
+            // LD ($FF00+n),A
+            uint8_t n = rom[cpu.pc++];
+            DIS { printf("LD ($FF00+$%x),A\n", n); }
+            SET8(&cpu, 0xff00 + n, cpu.a);
         } else if ((b & 0xcf) == 0x01) {
-            // LD dd, nn
+            // LD dd,nn
             uint8_t r = (b >> 4) & 0x3;
             uint16_t v = rom[cpu.pc++];
             v |= rom[cpu.pc++] << 8;
@@ -220,7 +225,7 @@ int main(int argc, char **argv) {
             cpu.f = 0;
             cpu.fz = cpu.a == 0;
         } else if (b == 0x32) {
-            // LD (HL-), A
+            // LD (HL-),A
             DIS { printf("LD (HL-),A\n"); }
             SET8(&cpu, cpu.hl--, cpu.a);
 
@@ -228,7 +233,7 @@ int main(int argc, char **argv) {
         } else if (b == 0xcb) {
             b = rom[cpu.pc++];
             if ((b & 0xc0) == 0x40) {
-                // BIT b, r
+                // BIT b,r
                 uint8_t bit = (b >> 3) & 0x7,
                         r = b & 0x7;
                 DIS { printf("BIT %d,%s\n", bit, REG8N(r)); }
