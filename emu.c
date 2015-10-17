@@ -455,6 +455,9 @@ int main(int argc, char **argv) {
             // RET
             DIS { printf("RET\n"); }
             cpu.pc = POP16(&cpu);
+        } else if (b == 0x00) {
+            // NOP
+            DIS { printf("NOP\n"); }
         } else {
             fprintf(stderr, "unknown opcode: %x\n", b);
             dump(&cpu);
