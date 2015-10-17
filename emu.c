@@ -69,6 +69,10 @@ uint8_t GET8(cpu_t const *cpu, uint16_t addr) {
     return cpu->ram[addr];
 }
 
+void SET8(cpu_t *cpu, uint16_t addr, uint8_t v) {
+    cpu->ram[addr] = v;
+}
+
 uint8_t REG8(cpu_t const *cpu, int s) {
     switch (s) {
         case 0x7: return cpu->a;
@@ -94,6 +98,7 @@ void SREG8(cpu_t *cpu, int s, uint8_t v) {
         case 0x3: cpu->e = v; break;
         case 0x4: cpu->h = v; break;
         case 0x5: cpu->l = v; break;
+        case 0x6: SET8(cpu, cpu->hl, v); break;
         default:
             fprintf(stderr, "SREG8 got %x\n", s);
             exit(1);
@@ -164,10 +169,6 @@ char const *CCN(int s) {
     }
 }
 
-void SET8(cpu_t *cpu, uint16_t addr, uint8_t v) {
-    cpu->ram[addr] = v;
-}
-
 void PUSH16(cpu_t *cpu, uint16_t v) {
     cpu->sp -= 2;
     SET8(cpu, cpu->sp, v & 0xff);
@@ -203,7 +204,7 @@ int main(int argc, char **argv) {
 #define DIS if (show_dis)
 
     while (1) {
-        if (cpu.pc == 0x40 && !show_dis) {
+        if (cpu.pc == 0x51 && !show_dis) {
             printf("...\n");
             show_dis = 1;
         }
@@ -212,12 +213,26 @@ int main(int argc, char **argv) {
 
         uint8_t b = GET8(&cpu, cpu.pc++);
 
-        if ((b & 0xc7) == 0x06) {
+        if ((b & 0xc0) == 0x40) {
+            // LD r,r'
+            uint8_t dst = (b >> 3) & 0x7,
+                    src = b & 0x7;
+            DIS { printf("LD %s,%s\n", REG8N(dst), REG8N(src)); }
+            SREG8(&cpu, dst, REG8(&cpu, src));
+
+            // no flags set
+        } else if ((b & 0xc7) == 0x06) {
             // LD r,n
             uint8_t r = (b >> 3) & 0x7;
             uint8_t v = GET8(&cpu, cpu.pc++);
             DIS { printf("LD %s,$%x\n", REG8N(r), v); }
             SREG8(&cpu, r, v);
+
+            // no flags set
+        } else if (b == 0x1a) {
+            // LD A,(DE)
+            DIS { printf("LD A,(DE)\n"); }
+            cpu.a = GET8(&cpu, cpu.de);
 
             // no flags set
         } else if (b == 0xe2) {
@@ -226,6 +241,63 @@ int main(int argc, char **argv) {
             SET8(&cpu, 0xff00 + cpu.c, cpu.a);
 
             // no flags set
+        } else if (b == 0xe0) {
+            // LD ($FF00+n),A
+            uint8_t n = GET8(&cpu, cpu.pc++);
+            DIS { printf("LD ($FF00+$%x),A\n", n); }
+            SET8(&cpu, 0xff00 + n, cpu.a);
+
+            // no flags set
+        } else if (b == 0xea) {
+            // LD (nn),A
+            uint16_t v = GET8(&cpu, cpu.pc++);
+            v |= GET8(&cpu, cpu.pc++) << 8;
+            DIS { printf("LD ($%04x),A\n", v); }
+            SET8(&cpu, v, cpu.a);
+
+            // no flags set
+        } else if (b == 0x22) {
+            // LD (HL+),A
+            DIS { printf("LD (HL+),A\n"); }
+            SET8(&cpu, cpu.hl++, cpu.a);
+
+            // no flags set
+        } else if (b == 0x32) {
+            // LD (HL-),A
+            DIS { printf("LD (HL-),A\n"); }
+            SET8(&cpu, cpu.hl--, cpu.a);
+
+            // no flags set
+        } else if ((b & 0xcf) == 0x01) {
+            // LD dd,nn
+            uint8_t r = (b >> 4) & 0x3;
+            uint16_t v = GET8(&cpu, cpu.pc++);
+            v |= GET8(&cpu, cpu.pc++) << 8;
+            DIS { printf("LD %s,$%04x\n", REG16N(r), v); }
+            SREG16(&cpu, r, v);
+
+            // no flags set
+        } else if ((b & 0xcf) == 0xc5) {
+            // PUSH qq
+            uint8_t qq = (b >> 4) & 0x3;
+            DIS { printf("PUSH %s\n", REG16N(qq)); }
+            PUSH16(&cpu, REG16(&cpu, qq));
+
+            // no flags set
+        } else if ((b & 0xcf) == 0xc1) {
+            // POP qq
+            uint8_t qq = (b >> 4) & 0x3;
+            DIS { printf("POP %s\n", REG16N(qq)); }
+            SREG16(&cpu, qq, POP16(&cpu));
+
+            // no flags set
+        } else if ((b & 0xf8) == 0xa8) {
+            // XOR r
+            DIS { printf("XOR %s\n", REG8N(b & 0x7)); }
+            cpu.a = cpu.a ^ REG8(&cpu, b & 0x7);
+
+            cpu.f = 0;
+            cpu.fz = cpu.a == 0;
         } else if (b == 0xfe) {
             // CP n
             uint8_t n = GET8(&cpu, cpu.pc++);
@@ -263,84 +335,6 @@ int main(int argc, char **argv) {
             SREG16(&cpu, r, v);
 
             // no flags set (!)
-        } else if ((b & 0xf8) == 0x70) {
-            // LD (HL),r
-            uint8_t r = b & 0x7;
-            DIS { printf("LD (HL),%s\n", REG8N(r)); }
-            SET8(&cpu, cpu.hl, REG8(&cpu, r));
-
-            // no flags set
-        } else if (b == 0xe0) {
-            // LD ($FF00+n),A
-            uint8_t n = GET8(&cpu, cpu.pc++);
-            DIS { printf("LD ($FF00+$%x),A\n", n); }
-            SET8(&cpu, 0xff00 + n, cpu.a);
-
-            // no flags set
-        } else if (b == 0x1a) {
-            // LD A,(DE)
-            DIS { printf("LD A,(DE)\n"); }
-            cpu.a = GET8(&cpu, cpu.de);
-
-            // no flags set
-        } else if ((b & 0xc0) == 0x40) {
-            // LD r,r'
-            uint8_t dst = (b >> 3) & 0x7,
-                    src = b & 0x7;
-            DIS { printf("LD %s,%s\n", REG8N(dst), REG8N(src)); }
-            SREG8(&cpu, dst, REG8(&cpu, src));
-
-            // no flags set
-        } else if ((b & 0xcf) == 0xc5) {
-            // PUSH qq
-            uint8_t qq = (b >> 4) & 0x3;
-            DIS { printf("PUSH %s\n", REG16N(qq)); }
-            PUSH16(&cpu, REG16(&cpu, qq));
-
-            // no flags set
-        } else if ((b & 0xcf) == 0xc1) {
-            // POP qq
-            uint8_t qq = (b >> 4) & 0x3;
-            DIS { printf("POP %s\n", REG16N(qq)); }
-            SREG16(&cpu, qq, POP16(&cpu));
-
-            // no flags set
-        } else if (b == 0xea) {
-            // LD (nn),A
-            uint16_t v = GET8(&cpu, cpu.pc++);
-            v |= GET8(&cpu, cpu.pc++) << 8;
-            DIS { printf("LD ($%04x),A\n", v); }
-            SET8(&cpu, v, cpu.a);
-
-            // no flags set
-        } else if ((b & 0xcf) == 0x01) {
-            // LD dd,nn
-            uint8_t r = (b >> 4) & 0x3;
-            uint16_t v = GET8(&cpu, cpu.pc++);
-            v |= GET8(&cpu, cpu.pc++) << 8;
-            DIS { printf("LD %s,$%04x\n", REG16N(r), v); }
-            SREG16(&cpu, r, v);
-
-            // no flags set
-        } else if ((b & 0xf8) == 0xa8) {
-            // XOR r
-            DIS { printf("XOR %s\n", REG8N(b & 0x7)); }
-            cpu.a = cpu.a ^ REG8(&cpu, b & 0x7);
-
-            cpu.f = 0;
-            cpu.fz = cpu.a == 0;
-        } else if (b == 0x32) {
-            // LD (HL-),A
-            DIS { printf("LD (HL-),A\n"); }
-            SET8(&cpu, cpu.hl--, cpu.a);
-
-            // no flags set
-        } else if (b == 0x22) {
-            // LD (HL+),A
-            DIS { printf("LD (HL+),A\n"); }
-            SET8(&cpu, cpu.hl++, cpu.a);
-
-            // no flags set
         } else if (b == 0x17) {
             // RLA
             DIS { printf("RLA\n"); }
@@ -355,16 +349,7 @@ int main(int argc, char **argv) {
             cpu.fz = cpu.a == 0;
         } else if (b == 0xcb) {
             b = GET8(&cpu, cpu.pc++);
-            if ((b & 0xc0) == 0x40) {
-                // BIT b,r
-                uint8_t bit = (b >> 3) & 0x7,
-                        r = b & 0x7;
-                DIS { printf("BIT %d,%s\n", bit, REG8N(r)); }
-
-                cpu.fz = ((REG8(&cpu, r) >> bit) & 0x1) == 0;
-                cpu.fn = 0;
-                cpu.fh = 1;
-            } else if ((b & 0xf8) == 0x10) {
+            if ((b & 0xf8) == 0x10) {
                 // RL r
                 uint8_t r = b & 0x3;
                 DIS { printf("RL %s\n", REG8N(r)); }
@@ -378,6 +363,15 @@ int main(int argc, char **argv) {
                 SREG8(&cpu, r, v);
 
                 cpu.fz = v == 0;
+            } else if ((b & 0xc0) == 0x40) {
+                // BIT b,r
+                uint8_t bit = (b >> 3) & 0x7,
+                        r = b & 0x7;
+                DIS { printf("BIT %d,%s\n", bit, REG8N(r)); }
+
+                cpu.fz = ((REG8(&cpu, r) >> bit) & 0x1) == 0;
+                cpu.fn = 0;
+                cpu.fh = 1;
             } else {
                 fprintf(stderr, "unknown cb opcode: %x\n", b);
                 dump(&cpu);
