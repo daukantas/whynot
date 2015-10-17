@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int read_file(char const *filename, uint8_t **out, long *len) {
     FILE *f = fopen(filename, "r");
@@ -46,7 +47,7 @@ typedef struct {
     };
     uint16_t sp, pc;
 
-    uint8_t ram[0x10000];
+    uint8_t rom[0x100], ram[0x10000];
 } cpu_t;
 
 void dump(cpu_t const *cpu) {
@@ -146,7 +147,16 @@ void SET8(cpu_t *cpu, uint16_t addr, uint8_t v) {
     cpu->ram[addr] = v;
 }
 
+void PUSH16(cpu_t *cpu, uint16_t v) {
+    cpu->sp -= 2;
+    SET8(cpu, cpu->sp, v & 0xff);
+    SET8(cpu, cpu->sp + 1, (v >> 8) & 0xff);
+}
+
 uint8_t GET8(cpu_t const *cpu, uint16_t addr) {
+    if (addr < 0x100 && cpu->ram[0xff50] == 0x00) {
+        return cpu->rom[addr];
+    }
     return cpu->ram[addr];
 }
 
@@ -162,6 +172,7 @@ int main(int argc, char **argv) {
     }
 
     cpu_t cpu;
+    memcpy(cpu.rom, rom, 256);
     cpu.pc = 0;
     SET8(&cpu, 0xff50, 0);
 
@@ -178,12 +189,12 @@ int main(int argc, char **argv) {
 
         DIS { printf("%04x: ", cpu.pc); }
 
-        uint8_t b = rom[cpu.pc++];
+        uint8_t b = GET8(&cpu, cpu.pc++);
 
         if ((b & 0xc7) == 0x06) {
             // LD r,n
             uint8_t r = (b >> 3) & 0x7;
-            uint8_t v = rom[cpu.pc++];
+            uint8_t v = GET8(&cpu, cpu.pc++);
             DIS { printf("LD %s,$%x\n", REG8N(r), v); }
             SREG8(&cpu, r, v);
 
@@ -209,25 +220,43 @@ int main(int argc, char **argv) {
             uint8_t r = b & 0x7;
             DIS { printf("LD (HL),%s\n", REG8N(r)); }
             SET8(&cpu, cpu.hl, REG8(&cpu, r));
+
+            // no flags set
         } else if (b == 0xe0) {
             // LD ($FF00+n),A
-            uint8_t n = rom[cpu.pc++];
+            uint8_t n = GET8(&cpu, cpu.pc++);
             DIS { printf("LD ($FF00+$%x),A\n", n); }
             SET8(&cpu, 0xff00 + n, cpu.a);
+
+            // no flags set
         } else if (b == 0x1a) {
             // LD A,(DE)
             DIS { printf("LD A,(DE)\n"); }
             cpu.a = GET8(&cpu, cpu.de);
+
+            // no flags set
         } else if (b == 0xcd) {
             // CALL nn
-            uint16_t v = rom[cpu.pc++];
-            v |= rom[cpu.pc++] << 8;
+            uint16_t v = GET8(&cpu, cpu.pc++);
+            v |= GET8(&cpu, cpu.pc++) << 8;
             DIS { printf("CALL $%04x\n", v); }
+            PUSH16(&cpu, cpu.pc);
+            cpu.pc = v;
+
+            // no flags set
+        } else if ((b & 0xc0) == 0x40) {
+            // LD r,r'
+            uint8_t dst = (b >> 3) & 0x7,
+                    src = b & 0x7;
+            DIS { printf("LD %s,%s\n", REG8N(dst), REG8N(src)); }
+            SREG8(&cpu, dst, REG8(&cpu, src));
+
+            // no flags set
         } else if ((b & 0xcf) == 0x01) {
             // LD dd,nn
             uint8_t r = (b >> 4) & 0x3;
-            uint16_t v = rom[cpu.pc++];
-            v |= rom[cpu.pc++] << 8;
+            uint16_t v = GET8(&cpu, cpu.pc++);
+            v |= GET8(&cpu, cpu.pc++) << 8;
             DIS { printf("LD %s,$%04x\n", REG16N(r), v); }
             SREG16(&cpu, r, v);
 
@@ -246,7 +275,7 @@ int main(int argc, char **argv) {
 
             // no flags set
         } else if (b == 0xcb) {
-            b = rom[cpu.pc++];
+            b = GET8(&cpu, cpu.pc++);
             if ((b & 0xc0) == 0x40) {
                 // BIT b,r
                 uint8_t bit = (b >> 3) & 0x7,
@@ -264,7 +293,7 @@ int main(int argc, char **argv) {
         } else if ((b & 0xe7) == 0x20) {
             // JR cc, e
             uint8_t cc = (b >> 3) & 0x3;
-            int16_t e = (int16_t) ((int8_t) rom[cpu.pc++]) + 2;
+            int16_t e = (int16_t) ((int8_t) GET8(&cpu, cpu.pc++)) + 2;
             DIS { printf("JR %s, %d\n", CCN(cc), e); }
 
             int do_jump = 0;
