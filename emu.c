@@ -62,6 +62,13 @@ void dump(cpu_t const *cpu) {
     printf("\n");
 }
 
+uint8_t GET8(cpu_t const *cpu, uint16_t addr) {
+    if (addr < 0x100 && cpu->ram[0xff50] == 0x00) {
+        return cpu->rom[addr];
+    }
+    return cpu->ram[addr];
+}
+
 uint8_t REG8(cpu_t const *cpu, int s) {
     switch (s) {
         case 0x7: return cpu->a;
@@ -71,6 +78,7 @@ uint8_t REG8(cpu_t const *cpu, int s) {
         case 0x3: return cpu->e;
         case 0x4: return cpu->h;
         case 0x5: return cpu->l;
+        case 0x6: return GET8(cpu, cpu->hl);
         default:
             fprintf(stderr, "REG8 got %x\n", s);
             exit(1);
@@ -101,6 +109,7 @@ char const *REG8N(int s) {
         case 0x3: return "E";
         case 0x4: return "H";
         case 0x5: return "L";
+        case 0x6: return "(HL)";
         default:
             fprintf(stderr, "REG8N got %x\n", s);
             exit(1);
@@ -163,13 +172,6 @@ void PUSH16(cpu_t *cpu, uint16_t v) {
     cpu->sp -= 2;
     SET8(cpu, cpu->sp, v & 0xff);
     SET8(cpu, cpu->sp + 1, (v >> 8) & 0xff);
-}
-
-uint8_t GET8(cpu_t const *cpu, uint16_t addr) {
-    if (addr < 0x100 && cpu->ram[0xff50] == 0x00) {
-        return cpu->rom[addr];
-    }
-    return cpu->ram[addr];
 }
 
 int main(int argc, char **argv) {
@@ -293,6 +295,18 @@ int main(int argc, char **argv) {
             SET8(&cpu, cpu.hl--, cpu.a);
 
             // no flags set
+        } else if (b == 0x17) {
+            // RLA
+            DIS { printf("RLA\n"); }
+            uint8_t v = cpu.a,
+                    old_fc = cpu.fc;
+            cpu.f = 0;
+            cpu.fc = (v & 0x80) == 0x80;
+
+            v = ((v & 0x7f) << 1) | old_fc;
+            cpu.a = v;
+
+            cpu.fz = cpu.a == 0;
         } else if (b == 0xcb) {
             b = GET8(&cpu, cpu.pc++);
             if ((b & 0xc0) == 0x40) {
@@ -304,6 +318,20 @@ int main(int argc, char **argv) {
                 cpu.fz = ((REG8(&cpu, r) >> bit) & 0x1) == 0;
                 cpu.fn = 0;
                 cpu.fh = 1;
+            } else if ((b & 0xf8) == 0x10) {
+                // RL r
+                uint8_t r = b & 0x3;
+                DIS { printf("RL %s\n", REG8N(r)); }
+                uint8_t v = REG8(&cpu, r),
+                        old_fc = cpu.fc;
+
+                cpu.f = 0;
+                cpu.fc = (v & 0x80) == 0x80;
+
+                v = ((v & 0x7f) << 1) | old_fc;
+                SREG8(&cpu, r, v);
+
+                cpu.fz = v == 0;
             } else {
                 fprintf(stderr, "unknown cb opcode: %x\n", b);
                 dump(&cpu);
