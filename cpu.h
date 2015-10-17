@@ -38,6 +38,8 @@ typedef struct {
     uint8_t rom[0x100], ram[0x10000], *cart;
 } cpu_t;
 
+void cpu_init(cpu_t *cpu, uint8_t const *rom, uint8_t *cart);
+
 void dump(cpu_t const *cpu);
 
 uint8_t GET8(cpu_t const *cpu, uint16_t addr);

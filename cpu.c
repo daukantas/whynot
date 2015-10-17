@@ -1,6 +1,15 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "cpu.h"
+
+void cpu_init(cpu_t *cpu, uint8_t const *rom, uint8_t *cart) {
+    memcpy(cpu->rom, rom, 256);
+    cpu->cart = cart;
+    cpu->pc = 0;
+    SET8(cpu, 0xff50, 0);
+    SET8(cpu, 0xff44, 0x90);  // hack
+}
 
 void dump(cpu_t const *cpu) {
     printf("\n");
