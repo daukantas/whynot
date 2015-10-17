@@ -197,6 +197,7 @@ int main(int argc, char **argv) {
     memcpy(cpu.rom, rom, 256);
     cpu.pc = 0;
     SET8(&cpu, 0xff50, 0);
+    SET8(&cpu, 0xff44, 0x90);  // hack
 
     dump(&cpu);
 
@@ -298,6 +299,17 @@ int main(int argc, char **argv) {
             SREG16(&cpu, qq, POP16(&cpu));
 
             // no flags set
+        } else if ((b & 0xf8) == 0x90) {
+            // SUB r
+            uint8_t r = b & 0x7;
+            DIS { printf("SUB %s\n", REG8N(r)); }
+
+            uint8_t n = REG8(&cpu, r);
+            cpu.fz = cpu.a == n;
+            cpu.fn = 1;
+            cpu.fh = (((int) cpu.a & 0xf) - ((int) n & 0xf)) < 0;  // ?
+            cpu.fc = cpu.a > n;
+            cpu.a -= n;
         } else if ((b & 0xf8) == 0xa8) {
             // XOR r
             DIS { printf("XOR %s\n", REG8N(b & 0x7)); }
