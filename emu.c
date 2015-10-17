@@ -236,6 +236,24 @@ int main(int argc, char **argv) {
             cpu.fz = v == 0;
             cpu.fn = 0;
             cpu.fh = v == 0x10;
+        } else if ((b & 0xc7) == 0x05) {
+            // DEC r
+            uint8_t r = (b >> 3) & 0x7;
+            DIS { printf("DEC %s\n", REG8N(r)); }
+            uint8_t v = REG8(&cpu, r) - 1;
+            SREG8(&cpu, r, v);
+
+            cpu.fz = v == 0;
+            cpu.fn = 1;
+            cpu.fh = (v & 0x8) == 0x8;  // ?
+        } else if ((b & 0xcf) == 0x03) {
+            // INC ss
+            uint8_t r = (b >> 4) & 0x3;
+            DIS { printf("INC %s\n", REG16N(r)); }
+            uint16_t v = REG16(&cpu, r) + 1;
+            SREG16(&cpu, r, v);
+
+            // no flags set (!)
         } else if ((b & 0xf8) == 0x70) {
             // LD (HL),r
             uint8_t r = b & 0x7;
@@ -307,6 +325,12 @@ int main(int argc, char **argv) {
             // LD (HL-),A
             DIS { printf("LD (HL-),A\n"); }
             SET8(&cpu, cpu.hl--, cpu.a);
+
+            // no flags set
+        } else if (b == 0x22) {
+            // LD (HL+),A
+            DIS { printf("LD (HL+),A\n"); }
+            SET8(&cpu, cpu.hl++, cpu.a);
 
             // no flags set
         } else if (b == 0x17) {
