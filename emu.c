@@ -146,6 +146,10 @@ void SET8(cpu_t *cpu, uint16_t addr, uint8_t v) {
     cpu->ram[addr] = v;
 }
 
+uint8_t GET8(cpu_t const *cpu, uint16_t addr) {
+    return cpu->ram[addr];
+}
+
 int main(int argc, char **argv) {
     uint8_t *rom, *cart;
     long romlen, cartlen;
@@ -159,7 +163,7 @@ int main(int argc, char **argv) {
 
     cpu_t cpu;
     cpu.pc = 0;
-    cpu.ram[0xff50] = 0;
+    SET8(&cpu, 0xff50, 0);
 
     dump(&cpu);
 
@@ -171,6 +175,8 @@ int main(int argc, char **argv) {
             printf("...\n");
             show_dis = 1;
         }
+
+        DIS { printf("%04x: ", cpu.pc); }
 
         uint8_t b = rom[cpu.pc++];
 
@@ -208,6 +214,15 @@ int main(int argc, char **argv) {
             uint8_t n = rom[cpu.pc++];
             DIS { printf("LD ($FF00+$%x),A\n", n); }
             SET8(&cpu, 0xff00 + n, cpu.a);
+        } else if (b == 0x1a) {
+            // LD A,(DE)
+            DIS { printf("LD A,(DE)\n"); }
+            cpu.a = GET8(&cpu, cpu.de);
+        } else if (b == 0xcd) {
+            // CALL nn
+            uint16_t v = rom[cpu.pc++];
+            v |= rom[cpu.pc++] << 8;
+            DIS { printf("CALL $%04x\n", v); }
         } else if ((b & 0xcf) == 0x01) {
             // LD dd,nn
             uint8_t r = (b >> 4) & 0x3;
