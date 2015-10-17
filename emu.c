@@ -211,6 +211,7 @@ int main(int argc, char **argv) {
     int show_dis = 0;
 #define DIS if (show_dis)
 
+    printf("starting execution\n");
     while (1) {
         if (cpu.pc == 0x0100 && !show_dis) {
             printf("...\n");
@@ -467,6 +468,9 @@ int main(int argc, char **argv) {
         } else if (b == 0x00) {
             // NOP
             DIS { printf("NOP\n"); }
+        } else if (b == 0xf3) {
+            // DI
+            DIS { printf("DI\n"); }
         } else {
             fprintf(stderr, "unknown opcode: %x\n", b);
             dump(&cpu);
