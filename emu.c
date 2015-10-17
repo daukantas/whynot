@@ -166,16 +166,9 @@ int main(int argc, char **argv) {
     int show_dis = 0;
 #define DIS if (show_dis)
 
-    // A 111 7
-    // B 000 0
-    // C 001 1
-    // D 010 2
-    // E 011 3
-    // H 100 4
-    // L 101 5
-
     while (1) {
-        if (cpu.pc >= 0x14) {
+        if (cpu.pc >= 0x14 && !show_dis) {
+            printf("...\n");
             show_dis = 1;
         }
 
@@ -205,6 +198,11 @@ int main(int argc, char **argv) {
             cpu.fz = v == 0;
             cpu.fn = 0;
             cpu.fh = v == 0x10;
+        } else if ((b & 0xf8) == 0x70) {
+            // LD (HL), r
+            uint8_t r = b & 0x7;
+            DIS { printf("LD (HL),%s\n", REG8N(r)); }
+            SET8(&cpu, cpu.hl, REG8(&cpu, r));
         } else if ((b & 0xcf) == 0x01) {
             // LD dd, nn
             uint8_t r = (b >> 4) & 0x3;
@@ -222,8 +220,8 @@ int main(int argc, char **argv) {
             cpu.f = 0;
             cpu.fz = cpu.a == 0;
         } else if (b == 0x32) {
-            // LD (HLD), A
-            DIS { printf("LD (HLD), A\n"); }
+            // LD (HL-), A
+            DIS { printf("LD (HL-),A\n"); }
             SET8(&cpu, cpu.hl--, cpu.a);
 
             // no flags set
