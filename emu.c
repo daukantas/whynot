@@ -204,7 +204,7 @@ int main(int argc, char **argv) {
 #define DIS if (show_dis)
 
     while (1) {
-        if (cpu.pc == 0x51 && !show_dis) {
+        if (cpu.pc == 0x62 && !show_dis) {
             printf("...\n");
             show_dis = 1;
         }
@@ -239,6 +239,13 @@ int main(int argc, char **argv) {
             // LD ($FF00+C),A
             DIS { printf("LD ($FF00+C),A\n"); }
             SET8(&cpu, 0xff00 + cpu.c, cpu.a);
+
+            // no flags set
+        } else if (b == 0xf0) {
+            // LD A,($FF00+n)
+            uint8_t n = GET8(&cpu, cpu.pc++);
+            DIS { printf("LD A,($FF00+$%x)\n", n); }
+            cpu.a = GET8(&cpu, 0xff00 + n);
 
             // no flags set
         } else if (b == 0xe0) {
@@ -377,6 +384,11 @@ int main(int argc, char **argv) {
                 dump(&cpu);
                 return 1;
             }
+        } else if (b == 0x18) {
+            // JR e
+            int16_t e = (int16_t) ((int8_t) GET8(&cpu, cpu.pc++)) + 2;
+            DIS { printf("JR %d\n", e); }
+            cpu.pc += (-2) + e;
         } else if ((b & 0xe7) == 0x20) {
             // JR cc, e
             uint8_t cc = (b >> 3) & 0x3;
