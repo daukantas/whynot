@@ -58,6 +58,8 @@ char const *CCN(int s);
 void PUSH16(cpu_t *cpu, uint16_t v);
 uint16_t POP16(cpu_t *cpu);
 
+int step(cpu_t *cpu);
+
 #endif
 
 // vim: set sw=4 et:
