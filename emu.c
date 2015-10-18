@@ -130,8 +130,12 @@ int run(cpu_t *cpu, SDL_Window *window) {
             double real_elapsed = (double) (SDL_GetTicks() - start_ticks) / 1000;
             printf("elapsed: %.02f (%0.2f vblank/sec) (real time: %.02f) (%.01f%%)\n", secs, (double) total_vblanks / secs, real_elapsed, secs / real_elapsed * 100.0);
         }
-
     }
+
+    if (retval == 0) {
+        dump(cpu);
+    }
+
     return retval;
 }
 

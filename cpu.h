@@ -40,6 +40,8 @@ typedef struct {
     int lcdc_mode;
     int lcdc_modeclock;
     int lcdc_line;
+
+    int lcdc_scx, lcdc_scy;
 } cpu_t;
 
 void cpu_init(cpu_t *cpu, uint8_t const *rom, uint8_t *cart);

@@ -20,6 +20,8 @@ void dump(cpu_t const *cpu) {
     printf(" D: %02x      E: %02x\n", cpu->d, cpu->e);
     printf(" H: %02x      L: %02x\n", cpu->h, cpu->l);
     printf("SP: %04x   PC: %04x\n", cpu->sp, cpu->pc);
+    printf("\n");
+    printf("SCX/Y: %02x/%02x\n", cpu->lcdc_scx, cpu->lcdc_scy);
     printf("==========================\n");
     printf("\n");
 }
@@ -31,11 +33,19 @@ uint8_t GET8(cpu_t const *cpu, uint16_t addr) {
     if (addr < 0x8000) {
         return cpu->cart[addr];
     }
-    if (addr == 0xFF41) {
+    if (addr == 0xff41) {
         // STAT
         return cpu->lcdc_mode;
     }
-    if (addr == 0xFF44) {
+    if (addr == 0xff42) {
+        // SCY
+        return cpu->lcdc_scy;
+    }
+    if (addr == 0xff43) {
+        // SCX
+        return cpu->lcdc_scx;
+    }
+    if (addr == 0xff44) {
         // LY
         return cpu->lcdc_line;
     }
@@ -46,7 +56,15 @@ void SET8(cpu_t *cpu, uint16_t addr, uint8_t v) {
     if (addr == 0xff50 && v != 0) {
         printf("DMG ROM overlay disabled\n");
     }
-    cpu->ram[addr] = v;
+    if (addr == 0xff42) {
+        // SCY
+        cpu->lcdc_scy = v;
+    } else if (addr == 0xff43) {
+        // SCX
+        cpu->lcdc_scx = v;
+    } else {
+        cpu->ram[addr] = v;
+    }
 }
 
 uint8_t REG8(cpu_t const *cpu, int s) {
