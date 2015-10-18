@@ -7,12 +7,25 @@
 
 #include "cpu.h"
 
-int run(cpu_t *cpu);
+int run(cpu_t *cpu, SDL_Window *window);
 int step(cpu_t *cpu);
 
 #define SCRW 160
 #define SCRH 144
 #define SCRSCALE 3
+
+GLubyte palette[4][3] = {
+    /*
+    { 255, 255, 255 },
+    { 254, 173, 106 },
+    { 130, 50, 11 },
+    { 0, 0, 0 },
+    */
+    { 17, 55, 18 },
+    { 50, 97, 51 },
+    { 140, 171, 37 },
+    { 157, 187, 41 },
+};
 
 int read_file(char const *filename, uint8_t **out, long *len) {
     FILE *f = fopen(filename, "r");
@@ -55,7 +68,7 @@ int main(int argc, char **argv) {
 
     SDL_GLContext glcontext = SDL_GL_CreateContext(window);
 
-    int retval = run(&cpu);
+    int retval = run(&cpu, window);
 
     SDL_GL_DeleteContext(glcontext);
     SDL_DestroyWindow(window);
@@ -64,10 +77,10 @@ int main(int argc, char **argv) {
     return retval;
 }
 
-static int show_dis = 0;
+static int show_dis = 1;
 #define DIS if (show_dis)
 
-int run(cpu_t *cpu) {
+int run(cpu_t *cpu, SDL_Window *window) {
     dump(cpu);
 
     printf("starting execution\n");
@@ -101,6 +114,12 @@ int run(cpu_t *cpu) {
             retval = 1;
         }
 
+        glClearColor(
+            ((float) palette[0][0]) / 255.0f,
+            ((float) palette[0][1]) / 255.0f,
+            ((float) palette[0][2]) / 255.0f,
+            1.0f);
+
         glClear(GL_COLOR_BUFFER_BIT);
 
         glViewport(0, 0, SCRW * SCRSCALE, SCRH * SCRSCALE);
@@ -111,6 +130,16 @@ int run(cpu_t *cpu) {
 
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
+        glColor3ubv(palette[3]);
+
+        glBegin(GL_TRIANGLE_STRIP);
+        glVertex2i(0, 0);
+        glVertex2i(SCRW, 0);
+        glVertex2i(0, SCRH);
+        glVertex2i(SCRW, SCRH);
+        glEnd();
+
+        SDL_GL_SwapWindow(window);
     }
     return retval;
 }
