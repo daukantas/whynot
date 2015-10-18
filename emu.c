@@ -152,13 +152,17 @@ void lcdc_step(cpu_t *cpu, SDL_Window *window, int t) {
             cpu->lcdc_mode = 1;  // vblank
             ++total_vblanks;
 
-            SDL_GL_SwapWindow(window);
-
             glClearColor(
                 ((float) palette[0][0]) / 255.0f,
                 ((float) palette[0][1]) / 255.0f,
                 ((float) palette[0][2]) / 255.0f,
                 1.0f);
+
+            if (!(cpu->lcdc & LCDC_OPERATE)) {
+                glClear(GL_COLOR_BUFFER_BIT);
+            }
+
+            SDL_GL_SwapWindow(window);
 
             glClear(GL_COLOR_BUFFER_BIT);
 

@@ -45,6 +45,14 @@ typedef struct {
     int lcdc_scx, lcdc_scy;
 } cpu_t;
 
+#define LCDC_BG_ON       (1 << 0)
+#define LCDC_OBJ_ON      (1 << 1)
+#define LCDC_BG_AREA     (1 << 3)  /* 0: 9800-9bff; 1: 9c00-9fff */
+#define LCDC_BG_CHAR     (1 << 4)  /* 0: 8800-97ff; 1: 8000-8fff */
+#define LCDC_WINDOW_ON   (1 << 5)
+#define LCDC_WINDOW_AREA (1 << 6)  /* 0: 9800-9bff; 1: 9c00-9fff */
+#define LCDC_OPERATE     (1 << 7)
+
 void cpu_init(cpu_t *cpu, uint8_t const *rom, uint8_t *cart);
 
 void dump(cpu_t const *cpu);
