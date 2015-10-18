@@ -4,11 +4,12 @@
 #include "cpu.h"
 
 void cpu_init(cpu_t *cpu, uint8_t const *rom, uint8_t *cart) {
+    memset(cpu, 0, sizeof(*cpu));
+
     memcpy(cpu->rom, rom, 256);
     cpu->cart = cart;
     cpu->pc = 0;
     SET8(cpu, 0xff50, 0);
-    SET8(cpu, 0xff44, 0x90);  // hack
 }
 
 void dump(cpu_t const *cpu) {
@@ -29,6 +30,14 @@ uint8_t GET8(cpu_t const *cpu, uint16_t addr) {
     }
     if (addr < 0x8000) {
         return cpu->cart[addr];
+    }
+    if (addr == 0xFF41) {
+        // STAT
+        return cpu->lcdc_mode;
+    }
+    if (addr == 0xFF44) {
+        // LY
+        return cpu->lcdc_line;
     }
     return cpu->ram[addr];
 }

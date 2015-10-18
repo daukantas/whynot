@@ -78,9 +78,6 @@ int main(int argc, char **argv) {
 
 void lcdc_step(cpu_t *cpu, SDL_Window *window, int t);
 
-int lcdc_mode = 0;
-int lcdc_modeclock = 0;
-int lcdc_line = 0;
 int total_vblanks = 0;
 Uint32 start_ticks = 0;
 
@@ -139,14 +136,16 @@ int run(cpu_t *cpu, SDL_Window *window) {
 }
 
 void lcdc_step(cpu_t *cpu, SDL_Window *window, int t) {
-    lcdc_modeclock += t;
+    cpu->lcdc_modeclock += t;
 
-    if (lcdc_mode == 0 && lcdc_modeclock >= 204) {
-        lcdc_modeclock = 0;
-        ++lcdc_line;
+    if (cpu->lcdc_mode == 0 && cpu->lcdc_modeclock >= 204) {
+        // hblank
+        //
+        cpu->lcdc_modeclock = 0;
+        ++cpu->lcdc_line;
 
-        if (lcdc_line == 143) {
-            lcdc_mode = 1;  // vblank
+        if (cpu->lcdc_line == 143) {
+            cpu->lcdc_mode = 1;  // vblank
             ++total_vblanks;
 
             SDL_GL_SwapWindow(window);
@@ -168,32 +167,38 @@ void lcdc_step(cpu_t *cpu, SDL_Window *window, int t) {
             glMatrixMode(GL_MODELVIEW);
             glLoadIdentity();
         } else {
-            lcdc_mode = 2;  // OAM read
+            cpu->lcdc_mode = 2;  // OAM read
         }
-    } else if (lcdc_mode == 1 && lcdc_modeclock >= 456) {
-        lcdc_modeclock = 0;
-        ++lcdc_line;
+    } else if (cpu->lcdc_mode == 1 && cpu->lcdc_modeclock >= 456) {
+        // vblank
+        //
+        cpu->lcdc_modeclock = 0;
+        ++cpu->lcdc_line;
 
-        if (lcdc_line > 153) {
-            lcdc_mode = 2;  // OAM read
-            lcdc_line = 0;
+        if (cpu->lcdc_line > 153) {
+            cpu->lcdc_mode = 2;  // OAM read
+            cpu->lcdc_line = 0;
         }
-    } else if (lcdc_mode == 2 && lcdc_modeclock >= 80) {
-        lcdc_modeclock = 0;
-        lcdc_mode = 3;  // VRAM read
-    } else if (lcdc_mode == 3 && lcdc_modeclock >= 172) {
-        lcdc_modeclock = 0;
-        lcdc_mode = 0;  // hblank
+    } else if (cpu->lcdc_mode == 2 && cpu->lcdc_modeclock >= 80) {
+        // OAM read
+        //
+        cpu->lcdc_modeclock = 0;
+        cpu->lcdc_mode = 3;  // VRAM read
+    } else if (cpu->lcdc_mode == 3 && cpu->lcdc_modeclock >= 172) {
+        // VRAM read
+        //
+        cpu->lcdc_modeclock = 0;
+        cpu->lcdc_mode = 0;  // hblank
 
         // render scanline
 
         glColor3ubv(palette[3]);
 
         glBegin(GL_TRIANGLE_STRIP);
-        glVertex2f(0, lcdc_line - 0.5f);
-        glVertex2f(SCRW, lcdc_line - 0.5f);
-        glVertex2f(0, lcdc_line + 0.5f);
-        glVertex2f(SCRW, lcdc_line + 0.5f);
+        glVertex2f(0, cpu->lcdc_line - 0.5f);
+        glVertex2f(SCRW, cpu->lcdc_line - 0.5f);
+        glVertex2f(0, cpu->lcdc_line + 0.5f);
+        glVertex2f(SCRW, cpu->lcdc_line + 0.5f);
         glEnd();
     }
 }

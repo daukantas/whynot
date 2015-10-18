@@ -36,6 +36,10 @@ typedef struct {
     uint16_t sp, pc;
 
     uint8_t rom[0x100], ram[0x10000], *cart;
+
+    int lcdc_mode;
+    int lcdc_modeclock;
+    int lcdc_line;
 } cpu_t;
 
 void cpu_init(cpu_t *cpu, uint8_t const *rom, uint8_t *cart);
