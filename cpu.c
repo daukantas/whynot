@@ -286,6 +286,16 @@ int step(cpu_t *cpu) {
         cpu->fc = cpu->a > n;
         cpu->a -= n;
         return r == 0x6 ? 8 : 4;
+    } else if (b == 0xe6) {
+        // AND n
+        uint8_t n = GET8(cpu, cpu->pc++);
+        DIS { printf("AND $%02x\n", n); }
+
+        cpu->a &= n;
+        cpu->f = 0;
+        cpu->fh = 1;
+        cpu->fz = cpu->a == 0;
+        return 8;
     } else if ((b & 0xf8) == 0xa8) {
         // XOR r
         uint8_t r = b & 0x7;
@@ -346,6 +356,15 @@ int step(cpu_t *cpu) {
         SREG16(cpu, r, v);
 
         // no flags set (!)
+        return 8;
+    } else if ((b & 0xcf) == 0x0b) {
+        // DEC ss
+        uint8_t r = (b >> 4) & 0x3;
+        DIS { printf("DEC %s\n", REG16N(r)); }
+        uint16_t v = REG16(cpu, r) - 1;
+        SREG16(cpu, r, v);
+
+        // no flags set
         return 8;
     } else if (b == 0x17) {
         // RLA
