@@ -56,7 +56,11 @@ void SET8(cpu_t *cpu, uint16_t addr, uint8_t v) {
     if (addr == 0xff50 && v != 0) {
         printf("DMG ROM overlay disabled\n");
     }
-    if (addr == 0xff42) {
+    if (addr == 0xff41) {
+        // STAT
+        // Low 3 bits are R/O.
+        cpu->lcdc_mode = (cpu->lcdc_mode & 0x7) | (v & 0xf8);
+    } else if (addr == 0xff42) {
         // SCY
         cpu->lcdc_scy = v;
     } else if (addr == 0xff43) {
