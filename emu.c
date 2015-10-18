@@ -200,24 +200,50 @@ void lcdc_step(cpu_t *cpu, SDL_Window *window, int t) {
 
         // render scanline
         
-        int offs = 0x9C00;  // 0x9800
-        offs += ((cpu->lcdc_line + cpu->lcdc_scy) & 0xff) >> 3;
-        int loffs = cpu->lcdc_scx >> 3;
-        int y = (cpu->lcdc_line + cpu->lcdc_scy) & 0x7;
-        int x = cpu->lcdc_scx & 0x7;
+        /*
+        if (cpu->lcdc & LCDC_BG_ON) {
+            int offs = (cpu->lcdc & LCDC_BG_AREA) ? 0x9C00 : 0x9800;
+            offs += ((cpu->lcdc_line + cpu->lcdc_scy) & 0xff) >> 3;
+            int loffs = cpu->lcdc_scx >> 3;
+            int y = (cpu->lcdc_line + cpu->lcdc_scy) & 0x7;
+            int x = cpu->lcdc_scx & 0x7;
 
-        int tile = cpu->ram[offs + loffs];
+            uint8_t tile = cpu->ram[offs + loffs];
 
-        glBegin(GL_QUADS);
-        for (int i = 0; i < 160; ++i) {
-            glColor3ubv(palette[rand() % 4]);
+            glBegin(GL_QUADS);
+            for (int i = 0; i < 160; ++i) {
+                glColor3ubv(palette[rand() % 4]);
 
-            glVertex2i(i, cpu->lcdc_line);
-            glVertex2i(i + 1, cpu->lcdc_line);
-            glVertex2i(i + 1, cpu->lcdc_line + 1);
-            glVertex2i(i, cpu->lcdc_line + 1);
+                glVertex2i(i, cpu->lcdc_line);
+                glVertex2i(i + 1, cpu->lcdc_line);
+                glVertex2i(i + 1, cpu->lcdc_line + 1);
+                glVertex2i(i, cpu->lcdc_line + 1);
+            }
+            glEnd();
         }
-        glEnd();
+        */
+
+        if (cpu->lcdc & LCDC_OBJ_ON) {
+            for (int i = 0; i < 40; ++i) {
+                struct {
+                    uint8_t y;
+                    uint8_t x;
+                    uint8_t tile;
+                    struct {
+                        unsigned int palette : 1;
+                        unsigned int xflip : 1;
+                        unsigned int yflip : 1;
+                        unsigned int prio : 1;
+                        unsigned int unused : 4;
+                    };
+                } *objdata = (void *)&cpu->ram[0xfe00 + i * 4];
+                int y = objdata->y - 16,
+                    x = objdata->x - 8;
+                if (y <= cpu->lcdc_line && (y + 8) > cpu->lcdc_line) {
+                    printf("HIT %d\n", i);
+                }
+            }
+        }
     }
 }
 
