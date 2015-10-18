@@ -9,6 +9,7 @@ void cpu_init(cpu_t *cpu, uint8_t const *rom, uint8_t *cart) {
     memcpy(cpu->rom, rom, 256);
     cpu->cart = cart;
     cpu->pc = 0;
+    cpu->lcdc = 0x83;
     SET8(cpu, 0xff50, 0);
 }
 
@@ -21,6 +22,7 @@ void dump(cpu_t const *cpu) {
     printf(" H: %02x      L: %02x\n", cpu->h, cpu->l);
     printf("SP: %04x   PC: %04x\n", cpu->sp, cpu->pc);
     printf("\n");
+    printf(" LCDC: %02x\n", cpu->lcdc);
     printf("SCX/Y: %02x/%02x\n", cpu->lcdc_scx, cpu->lcdc_scy);
     printf("==========================\n");
     printf("\n");
@@ -29,23 +31,21 @@ void dump(cpu_t const *cpu) {
 uint8_t GET8(cpu_t const *cpu, uint16_t addr) {
     if (addr < 0x100 && cpu->ram[0xff50] == 0x00) {
         return cpu->rom[addr];
-    }
-    if (addr < 0x8000) {
+    } else if (addr < 0x8000) {
         return cpu->cart[addr];
-    }
-    if (addr == 0xff41) {
+    } else if (addr == 0xff40) {
+        // LCDC
+        return cpu->lcdc;
+    } else if (addr == 0xff41) {
         // STAT
         return cpu->lcdc_mode;
-    }
-    if (addr == 0xff42) {
+    } else if (addr == 0xff42) {
         // SCY
         return cpu->lcdc_scy;
-    }
-    if (addr == 0xff43) {
+    } else if (addr == 0xff43) {
         // SCX
         return cpu->lcdc_scx;
-    }
-    if (addr == 0xff44) {
+    } else if (addr == 0xff44) {
         // LY
         return cpu->lcdc_line;
     }
@@ -56,7 +56,10 @@ void SET8(cpu_t *cpu, uint16_t addr, uint8_t v) {
     if (addr == 0xff50 && v != 0) {
         printf("DMG ROM overlay disabled\n");
     }
-    if (addr == 0xff41) {
+    if (addr == 0xff40) {
+        // LCDC
+        cpu->lcdc = v;
+    } else if (addr == 0xff41) {
         // STAT
         // Low 3 bits are R/O.
         cpu->lcdc_mode = (cpu->lcdc_mode & 0x7) | (v & 0xf8);

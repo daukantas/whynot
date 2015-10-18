@@ -202,6 +202,8 @@ void lcdc_step(cpu_t *cpu, SDL_Window *window, int t) {
         int y = (cpu->lcdc_line + cpu->lcdc_scy) & 0x7;
         int x = cpu->lcdc_scx & 0x7;
 
+        int tile = cpu->ram[offs + loffs];
+
         glBegin(GL_QUADS);
         for (int i = 0; i < 160; ++i) {
             glColor3ubv(palette[rand() % 4]);

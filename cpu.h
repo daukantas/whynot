@@ -37,6 +37,7 @@ typedef struct {
 
     uint8_t rom[0x100], ram[0x10000], *cart;
 
+    int lcdc;
     int lcdc_mode;
     int lcdc_modeclock;
     int lcdc_line;
