@@ -76,6 +76,14 @@ int main(int argc, char **argv) {
     return retval;
 }
 
+void lcdc_step(cpu_t *cpu, SDL_Window *window, int t);
+
+int lcdc_mode = 0;
+int lcdc_modeclock = 0;
+int lcdc_line = 0;
+int total_vblanks = 0;
+Uint32 start_ticks = 0;
+
 int run(cpu_t *cpu, SDL_Window *window) {
     dump(cpu);
 
@@ -83,6 +91,10 @@ int run(cpu_t *cpu, SDL_Window *window) {
 
     int running = 1;
     int retval = 0;
+    int elapsed = 0;
+    int last_elapsed = 0;
+    start_ticks = SDL_GetTicks();
+
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -109,36 +121,81 @@ int run(cpu_t *cpu, SDL_Window *window) {
         if (t == -1) {
             running = 0;
             retval = 1;
+        } else {
+            elapsed += t;
         }
 
-        glClearColor(
-            ((float) palette[0][0]) / 255.0f,
-            ((float) palette[0][1]) / 255.0f,
-            ((float) palette[0][2]) / 255.0f,
-            1.0f);
+        lcdc_step(cpu, window, t);
 
-        glClear(GL_COLOR_BUFFER_BIT);
+        if (elapsed > last_elapsed + 100000) {
+            last_elapsed = elapsed;
+            double secs = ((double) elapsed) / 4194300;
+            double real_elapsed = (double) (SDL_GetTicks() - start_ticks) / 1000;
+            printf("elapsed: %.02f (%0.2f vblank/sec) (real time: %.02f) (%.01f%%)\n", secs, (double) total_vblanks / secs, real_elapsed, secs / real_elapsed * 100.0);
+        }
 
-        glViewport(0, 0, SCRW * SCRSCALE, SCRH * SCRSCALE);
+    }
+    return retval;
+}
 
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        glOrtho(0, SCRW, SCRH, 0, -1, 1);
+void lcdc_step(cpu_t *cpu, SDL_Window *window, int t) {
+    lcdc_modeclock += t;
 
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
+    if (lcdc_mode == 0 && lcdc_modeclock >= 204) {
+        lcdc_modeclock = 0;
+        ++lcdc_line;
+
+        if (lcdc_line == 143) {
+            lcdc_mode = 1;  // vblank
+            ++total_vblanks;
+
+            SDL_GL_SwapWindow(window);
+
+            glClearColor(
+                ((float) palette[0][0]) / 255.0f,
+                ((float) palette[0][1]) / 255.0f,
+                ((float) palette[0][2]) / 255.0f,
+                1.0f);
+
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            glViewport(0, 0, SCRW * SCRSCALE, SCRH * SCRSCALE);
+
+            glMatrixMode(GL_PROJECTION);
+            glLoadIdentity();
+            glOrtho(0, SCRW, SCRH, 0, -1, 1);
+
+            glMatrixMode(GL_MODELVIEW);
+            glLoadIdentity();
+        } else {
+            lcdc_mode = 2;  // OAM read
+        }
+    } else if (lcdc_mode == 1 && lcdc_modeclock >= 456) {
+        lcdc_modeclock = 0;
+        ++lcdc_line;
+
+        if (lcdc_line > 153) {
+            lcdc_mode = 2;  // OAM read
+            lcdc_line = 0;
+        }
+    } else if (lcdc_mode == 2 && lcdc_modeclock >= 80) {
+        lcdc_modeclock = 0;
+        lcdc_mode = 3;  // VRAM read
+    } else if (lcdc_mode == 3 && lcdc_modeclock >= 172) {
+        lcdc_modeclock = 0;
+        lcdc_mode = 0;  // hblank
+
+        // render scanline
+
         glColor3ubv(palette[3]);
 
         glBegin(GL_TRIANGLE_STRIP);
-        glVertex2i(0, 0);
-        glVertex2i(SCRW, 0);
-        glVertex2i(0, SCRH);
-        glVertex2i(SCRW, SCRH);
+        glVertex2f(0, lcdc_line - 0.5f);
+        glVertex2f(SCRW, lcdc_line - 0.5f);
+        glVertex2f(0, lcdc_line + 0.5f);
+        glVertex2f(SCRW, lcdc_line + 0.5f);
         glEnd();
-
-        SDL_GL_SwapWindow(window);
     }
-    return retval;
 }
 
 // vim: set sw=4 et:

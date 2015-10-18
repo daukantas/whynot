@@ -149,15 +149,10 @@ uint16_t POP16(cpu_t *cpu) {
     return v;
 }
 
-static int show_dis = 1;
+static int show_dis = 0;
 #define DIS if (show_dis)
 
 int step(cpu_t *cpu) {
-    if (cpu->pc == 0x0100 && !show_dis) {
-        printf("...\n");
-        show_dis = 1;
-    }
-
     DIS { printf("%04x: ", cpu->pc); }
 
     uint8_t b = GET8(cpu, cpu->pc++);
