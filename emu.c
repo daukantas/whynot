@@ -202,13 +202,15 @@ void lcdc_step(cpu_t *cpu, SDL_Window *window, int t) {
         int y = (cpu->lcdc_line + cpu->lcdc_scy) & 0x7;
         int x = cpu->lcdc_scx & 0x7;
 
-        glColor3ubv(palette[rand() % 4]);
+        glBegin(GL_QUADS);
+        for (int i = 0; i < 160; ++i) {
+            glColor3ubv(palette[rand() % 4]);
 
-        glBegin(GL_TRIANGLE_STRIP);
-        glVertex2i(0, cpu->lcdc_line);
-        glVertex2i(SCRW, cpu->lcdc_line);
-        glVertex2i(0, cpu->lcdc_line + 1);
-        glVertex2i(SCRW, cpu->lcdc_line + 1);
+            glVertex2i(i, cpu->lcdc_line);
+            glVertex2i(i + 1, cpu->lcdc_line);
+            glVertex2i(i + 1, cpu->lcdc_line + 1);
+            glVertex2i(i, cpu->lcdc_line + 1);
+        }
         glEnd();
     }
 }
