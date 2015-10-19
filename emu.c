@@ -4,6 +4,8 @@
 
 #include <SDL.h>
 #include <SDL_opengl.h>
+#include <fmod.h>
+#include <fmod_errors.h>
 
 #include "cpu.h"
 
@@ -25,6 +27,13 @@ GLubyte palette[4][3] = {
     { 50, 97, 51 },
     { 17, 55, 18 },
 };
+
+void fmod_error_check(FMOD_RESULT result) {
+    if (result != FMOD_OK) {
+        fprintf(stderr, "FMOD error: %d - %s\n", result, FMOD_ErrorString(result));
+        exit(1);
+    }
+}
 
 int read_file(char const *filename, uint8_t **out, long *len) {
     FILE *f = fopen(filename, "r");
@@ -67,7 +76,31 @@ int main(int argc, char **argv) {
 
     SDL_GLContext glcontext = SDL_GL_CreateContext(window);
 
+    FMOD_RESULT result;
+
+    FMOD_SYSTEM *system;
+    result = FMOD_System_Create(&system);
+    fmod_error_check(result);
+
+    unsigned int version;
+    result = FMOD_System_GetVersion(system, &version);
+    fmod_error_check(result);
+
+    if (version < FMOD_VERSION) {
+        fprintf(stderr, "FMOD lib version %08x doesn't match header version %08x\n", version, FMOD_VERSION);
+        exit(1);
+    }
+
+    result = FMOD_System_Init(system, 32, FMOD_INIT_NORMAL, NULL);
+    fmod_error_check(result);
+
     int retval = run(&cpu, window);
+
+    result = FMOD_System_Close(system);
+    fmod_error_check(result);
+
+    result = FMOD_System_Release(system);
+    fmod_error_check(result);
 
     SDL_GL_DeleteContext(glcontext);
     SDL_DestroyWindow(window);
