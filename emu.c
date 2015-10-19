@@ -114,6 +114,9 @@ void lcdc_step(cpu_t *cpu, SDL_Window *window, int t);
 int total_vblanks = 0;
 Uint32 start_ticks = 0;
 
+FMOD_DSP *dsp1;
+FMOD_CHANNEL *channel1;
+
 int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
     dump(cpu);
 
@@ -125,11 +128,11 @@ int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
     int last_elapsed = 0;
     start_ticks = SDL_GetTicks();
 
-    FMOD_DSP *dsp;
-    FMOD_System_CreateDSPByType(system, FMOD_DSP_TYPE_OSCILLATOR, &dsp);
+    FMOD_System_CreateDSPByType(system, FMOD_DSP_TYPE_OSCILLATOR, &dsp1);
+    FMOD_DSP_SetParameterInt(dsp1, FMOD_DSP_OSCILLATOR_TYPE, 1);
 
-    FMOD_CHANNEL *channel;
-    FMOD_System_PlayDSP(system, dsp, NULL, 0, &channel);
+    //FMOD_DSP_SetParameterFloat(dsp, FMOD_DSP_OSCILLATOR_RATE, 1049);
+    //FMOD_System_PlayDSP(system, dsp, NULL, 0, &channel);
 
     while (running) {
         SDL_Event event;

@@ -34,6 +34,18 @@ uint8_t GET8(cpu_t const *cpu, uint16_t addr) {
         return cpu->rom[addr];
     } else if (addr < 0x8000) {
         return cpu->cart[addr];
+    } else if (addr == 0xff11) {
+        // NR11
+        return cpu->nr11;
+    } else if (addr == 0xff12) {
+        // NR12
+        return cpu->nr12;
+    } else if (addr == 0xff13) {
+        // NR13
+        return cpu->nr13;
+    } else if (addr == 0xff14) {
+        // NR14
+        return cpu->nr14;
     } else if (addr == 0xff40) {
         // LCDC
         return cpu->lcdc;
@@ -60,7 +72,19 @@ void SET8(cpu_t *cpu, uint16_t addr, uint8_t v) {
     if (addr == 0xff50 && v != 0) {
         printf("DMG ROM overlay disabled\n");
     }
-    if (addr == 0xff40) {
+    if (addr == 0xff11) {
+        // NR11
+        cpu->nr11 = v;
+    } else if (addr == 0xff12) {
+        // NR12
+        cpu->nr12 = v;
+    } else if (addr == 0xff13) {
+        // NR13
+        cpu->nr13 = v;
+    } else if (addr == 0xff14) {
+        // NR14
+        cpu->nr14 = v;
+    } else if (addr == 0xff40) {
         // LCDC
         cpu->lcdc = v;
     } else if (addr == 0xff41) {
