@@ -202,17 +202,15 @@ void lcdc_step(cpu_t *cpu, SDL_Window *window, int t) {
         
         if (cpu->lcdc & LCDC_BG_ON) {
             int offs = (cpu->lcdc & LCDC_BG_AREA) ? 0x9C00 : 0x9800;
-            printf("offs: %x\n", offs);
-            offs += (((cpu->lcdc_line + cpu->lcdc_scy) & 0xff) >> 3);
+            offs += (((cpu->lcdc_line + cpu->lcdc_scy) & 0xff) >> 3) * 32;
             int loffs = cpu->lcdc_scx >> 3;
             int y = (cpu->lcdc_line + cpu->lcdc_scy) & 0x7;
             int x = cpu->lcdc_scx & 0x7;
 
             int16_t tile = (int8_t) cpu->ram[offs + loffs];
-            if ((cpu->lcdc & LCDC_BG_CHAR) && tile < 128) {
-                tile += 256;
-            }
-            printf("<%x> ", tile);
+            //if ((cpu->lcdc & LCDC_BG_CHAR) && tile < 128) {
+                //tile += 256;
+            //}
 
             glBegin(GL_QUADS);
             for (int i = 0; i < 160; ++i) {
@@ -221,6 +219,7 @@ void lcdc_step(cpu_t *cpu, SDL_Window *window, int t) {
                 int ci =
                     (cpu->ram[base] & sx) ? 1 : 0 +
                     (cpu->ram[base + 1] & sx) ? 2 : 0;
+                ci = (cpu->lcdc_bgp >> (ci * 2)) & 0x3;
 
                 glColor3ubv(palette[ci]);
 
@@ -234,10 +233,9 @@ void lcdc_step(cpu_t *cpu, SDL_Window *window, int t) {
                     x = 0;
                     loffs = (loffs + 1) & 0x1f;
                     tile = cpu->ram[offs + loffs];
-                    if ((cpu->lcdc & LCDC_BG_CHAR) && tile < 128) {
-                        tile += 256;
-                    }
-                    printf("<%x> ", tile);
+                    //if ((cpu->lcdc & LCDC_BG_CHAR) && tile < 128) {
+                        //tile += 256;
+                    //}
                 }
             }
             glEnd();

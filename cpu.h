@@ -41,6 +41,7 @@ typedef struct {
     int lcdc_mode;
     int lcdc_modeclock;
     int lcdc_line;
+    int lcdc_bgp;
 
     int lcdc_scx, lcdc_scy;
 } cpu_t;

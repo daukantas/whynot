@@ -10,6 +10,7 @@ void cpu_init(cpu_t *cpu, uint8_t const *rom, uint8_t *cart) {
     cpu->cart = cart;
     cpu->pc = 0;
     cpu->lcdc = 0x83;
+    cpu->lcdc_bgp = 0xd4;
     SET8(cpu, 0xff50, 0);
 }
 
@@ -22,7 +23,7 @@ void dump(cpu_t const *cpu) {
     printf(" H: %02x      L: %02x\n", cpu->h, cpu->l);
     printf("SP: %04x   PC: %04x\n", cpu->sp, cpu->pc);
     printf("\n");
-    printf(" LCDC: %02x\n", cpu->lcdc);
+    printf(" LCDC: %02x  BGP: %02x\n", cpu->lcdc, cpu->lcdc_bgp);
     printf("SCX/Y: %02x/%02x\n", cpu->lcdc_scx, cpu->lcdc_scy);
     printf("==========================\n");
     printf("\n");
@@ -48,6 +49,9 @@ uint8_t GET8(cpu_t const *cpu, uint16_t addr) {
     } else if (addr == 0xff44) {
         // LY
         return cpu->lcdc_line;
+    } else if (addr == 0xff47) {
+        // BGP
+        return cpu->lcdc_bgp;
     }
     return cpu->ram[addr];
 }
@@ -69,6 +73,9 @@ void SET8(cpu_t *cpu, uint16_t addr, uint8_t v) {
     } else if (addr == 0xff43) {
         // SCX
         cpu->lcdc_scx = v;
+    } else if (addr == 0xff47) {
+        // BGP
+        cpu->lcdc_bgp = v;
     } else {
         cpu->ram[addr] = v;
     }
