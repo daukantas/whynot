@@ -156,6 +156,7 @@ int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
             }
         }
 
+        // TODO: once per vblank?
         FMOD_RESULT result = FMOD_System_Update(system);
         fmod_error_check(result);
 
@@ -165,6 +166,11 @@ int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
             retval = 1;
         } else {
             elapsed += t;
+        }
+
+        if (cpu->nr14 & 0x80) {
+            printf("INIT\n\n\n");
+            cpu->nr14 &= ~0x80;
         }
 
         lcdc_step(cpu, window, t);
