@@ -9,7 +9,7 @@
 
 #include "cpu.h"
 
-int run(cpu_t *cpu, SDL_Window *window);
+int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system);
 
 #define SCRW 160
 #define SCRH 144
@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
     result = FMOD_System_Init(system, 32, FMOD_INIT_NORMAL, NULL);
     fmod_error_check(result);
 
-    int retval = run(&cpu, window);
+    int retval = run(&cpu, window, system);
 
     result = FMOD_System_Close(system);
     fmod_error_check(result);
@@ -114,7 +114,7 @@ void lcdc_step(cpu_t *cpu, SDL_Window *window, int t);
 int total_vblanks = 0;
 Uint32 start_ticks = 0;
 
-int run(cpu_t *cpu, SDL_Window *window) {
+int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
     dump(cpu);
 
     printf("starting execution\n");
@@ -124,6 +124,12 @@ int run(cpu_t *cpu, SDL_Window *window) {
     int elapsed = 0;
     int last_elapsed = 0;
     start_ticks = SDL_GetTicks();
+
+    FMOD_DSP *dsp;
+    FMOD_System_CreateDSPByType(system, FMOD_DSP_TYPE_OSCILLATOR, &dsp);
+
+    FMOD_CHANNEL *channel;
+    FMOD_System_PlayDSP(system, dsp, NULL, 0, &channel);
 
     while (running) {
         SDL_Event event;
@@ -146,6 +152,9 @@ int run(cpu_t *cpu, SDL_Window *window) {
                     break;
             }
         }
+
+        FMOD_RESULT result = FMOD_System_Update(system);
+        fmod_error_check(result);
 
         int t = step(cpu);
         if (t == -1) {
