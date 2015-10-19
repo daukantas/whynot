@@ -116,6 +116,8 @@ Uint32 start_ticks = 0;
 
 FMOD_DSP *dsp1;
 FMOD_CHANNEL *channel1;
+Uint32 start1 = 0;
+int vol1;
 
 int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
     dump(cpu);
@@ -165,14 +167,32 @@ int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
             elapsed += t;
         }
 
-        if (cpu->nr14 & 0x80) {
-            printf("INIT\n\n\n");
-            cpu->nr14 &= ~0x80;
+        Uint32 now = SDL_GetTicks();
 
+        if (cpu->nr14 & 0x80) {
+            cpu->nr14 &= ~0x80;
             int n = ((cpu->nr14 & 0x7) << 8) + cpu->nr13;
             FMOD_DSP_SetParameterFloat(dsp1, FMOD_DSP_OSCILLATOR_RATE, 131072 / (2048 - n));
             FMOD_System_PlayDSP(system, dsp1, NULL, 0, &channel1);
+
+            start1 = now;
+            vol1 = cpu->nr12 >> 4;
         }
+        
+        if (start1) {
+            int steplen = 1000 / 64 * (cpu->nr12 & 0x7);  // steplen/64 sec
+            while (vol1 && start1 + steplen < now) {
+                start1 += steplen;
+                --vol1;
+            }
+            if (!vol1) {
+                FMOD_Channel_Stop(channel1);
+                start1 = 0;
+            } else {
+                FMOD_Channel_SetVolume(channel1, ((float) vol1) / 16.0f);
+            }
+        }
+
 
         lcdc_step(cpu, window, t);
 
