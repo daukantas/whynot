@@ -131,9 +131,6 @@ int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
     FMOD_System_CreateDSPByType(system, FMOD_DSP_TYPE_OSCILLATOR, &dsp1);
     FMOD_DSP_SetParameterInt(dsp1, FMOD_DSP_OSCILLATOR_TYPE, 1);
 
-    //FMOD_DSP_SetParameterFloat(dsp, FMOD_DSP_OSCILLATOR_RATE, 1049);
-    //FMOD_System_PlayDSP(system, dsp, NULL, 0, &channel);
-
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -171,6 +168,10 @@ int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
         if (cpu->nr14 & 0x80) {
             printf("INIT\n\n\n");
             cpu->nr14 &= ~0x80;
+
+            int n = ((cpu->nr14 & 0x7) << 8) + cpu->nr13;
+            FMOD_DSP_SetParameterFloat(dsp1, FMOD_DSP_OSCILLATOR_RATE, 131072 / (2048 - n));
+            FMOD_System_PlayDSP(system, dsp1, NULL, 0, &channel1);
         }
 
         lcdc_step(cpu, window, t);
