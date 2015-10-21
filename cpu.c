@@ -10,6 +10,7 @@ void cpu_init(cpu_t *cpu, uint8_t const *rom, uint8_t *cart) {
     cpu->cart = cart;
     cpu->pc = 0;
     cpu->rom_lock = 1;
+    cpu->rom_bank_selected = 1;
     cpu->lcdc = 0x83;
     cpu->lcdc_bgp = 0xd4;
 }
@@ -35,7 +36,7 @@ uint8_t GET8(cpu_t const *cpu, uint16_t addr) {
     } else if (addr < 0x4000) {
         return cpu->cart[addr];
     } else if (addr >= 0x4000 & addr < 0x8000) {
-        return cpu->cart[addr + cpu->rom_bank_selected * 0x4000];
+        return cpu->cart[addr + (cpu->rom_bank_selected - 1) * 0x4000];
     } else if (addr == 0xff11) {
         // NR11
         return cpu->nr11;
@@ -87,6 +88,9 @@ void SET8(cpu_t *cpu, uint16_t addr, uint8_t v) {
 
     if (addr >= 0x2000 && addr <= 0x3fff) {
         cpu->rom_bank_selected = v & 0x7f;
+        if (!cpu->rom_bank_selected) {
+            cpu->rom_bank_selected = 1;
+        }
         return;
     }
 
