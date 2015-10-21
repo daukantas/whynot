@@ -599,6 +599,12 @@ int step(cpu_t *cpu) {
             return 12;
         }
         return 8;
+    } else if (b == 0xe9) {
+        // JP (HL)
+        DIS { printf("JP (HL)\n"); }
+
+        cpu->pc = cpu->hl;
+        return 4;
     } else if (b == 0xcd) {
         // CALL nn
         uint16_t v = GET8(cpu, cpu->pc++);
@@ -609,6 +615,29 @@ int step(cpu_t *cpu) {
 
         // no flags set
         return 24;
+    } else if ((b & 0xe7) == 0xc4) {
+        // CALL cc,nn
+        uint8_t cc = (b >> 3) & 0x3;
+        uint16_t v = GET8(cpu, cpu->pc++);
+        v |= GET8(cpu, cpu->pc++) << 8;
+        DIS { printf("CALL %s,$%04x\n", CCN(cc), v); }
+
+        int do_jump = 0;
+        switch (cc) {
+            case 0x0: do_jump = !cpu->fz; break;
+            case 0x1: do_jump = cpu->fz; break;
+            case 0x2: do_jump = !cpu->fc; break;
+            case 0x3: do_jump = cpu->fc; break;
+        }
+
+        if (do_jump) {
+            PUSH16(cpu, cpu->pc);
+            cpu->pc = v;
+            return 20;
+        }
+
+        // no flags set
+        return 8;
     } else if (b == 0xc9) {
         // RET
         DIS { printf("RET\n"); }
