@@ -538,6 +538,18 @@ int step(cpu_t *cpu) {
 
         // no flags set
         return 8;
+    } else if (b == 0x07) {
+        // RLCA
+        DIS { printf("RLCA\n"); }
+        uint8_t v = cpu->a;
+        cpu->f = 0;
+        cpu->fc = (v & 0x80) == 0x80;
+
+        v = ((v & 0x7f) << 1) | (v >> 7);
+        cpu->a = v;
+
+        cpu->fz = cpu->a == 0;
+        return 4;
     } else if (b == 0x17) {
         // RLA
         DIS { printf("RLA\n"); }
@@ -547,6 +559,31 @@ int step(cpu_t *cpu) {
         cpu->fc = (v & 0x80) == 0x80;
 
         v = ((v & 0x7f) << 1) | old_fc;
+        cpu->a = v;
+
+        cpu->fz = cpu->a == 0;
+        return 4;
+    } else if (b == 0x0f) {
+        // RRCA
+        DIS { printf("RRCA\n"); }
+        uint8_t v = cpu->a;
+        cpu->f = 0;
+        cpu->fc = (v & 0x1) == 0x1;
+
+        v = ((v & 0xfe) >> 1) | ((v & 0x1) << 7);
+        cpu->a = v;
+
+        cpu->fz = cpu->a == 0;
+        return 4;
+    } else if (b == 0x1f) {
+        // RRA
+        DIS { printf("RRA\n"); }
+        uint8_t v = cpu->a,
+                old_fc = cpu->fc;
+        cpu->f = 0;
+        cpu->fc = (v & 0x1) == 0x1;
+
+        v = ((v & 0xfe) >> 1) | (old_fc << 7);
         cpu->a = v;
 
         cpu->fz = cpu->a == 0;
