@@ -586,6 +586,23 @@ int step(cpu_t *cpu) {
         DIS { printf("RET\n"); }
         cpu->pc = POP16(cpu);
         return 16;
+    } else if ((b & 0xe7) == 0xc0) {
+        // RET cc
+        uint8_t cc = (b >> 3) & 0x3;
+        DIS { printf("RET %s\n", CCN(cc)); }
+
+        int do_jump = 0;
+        switch (cc) {
+            case 0x0: do_jump = !cpu->fz; break;
+            case 0x1: do_jump = cpu->fz; break;
+            case 0x2: do_jump = !cpu->fc; break;
+            case 0x3: do_jump = cpu->fc; break;
+        }
+
+        if (do_jump) {
+            cpu->pc = POP16(cpu);
+        }
+        return 10;
     } else if (b == 0x00) {
         // NOP
         DIS { printf("NOP\n"); }
