@@ -554,6 +554,26 @@ int step(cpu_t *cpu) {
         DIS { printf("JP $%04x\n", v); }
         cpu->pc = v;
         return 16;
+    } else if ((b & 0xe7) == 0xc2) {
+        // JP cc,nn
+        uint8_t cc = (b >> 3) & 0x3;
+        uint16_t v = GET8(cpu, cpu->pc++);
+        v |= GET8(cpu, cpu->pc++) << 8;
+        DIS { printf("JP %s,$%04x\n", CCN(cc), v); }
+
+        int do_jump = 0;
+        switch (cc) {
+            case 0x0: do_jump = !cpu->fz; break;
+            case 0x1: do_jump = cpu->fz; break;
+            case 0x2: do_jump = !cpu->fc; break;
+            case 0x3: do_jump = cpu->fc; break;
+        }
+
+        if (do_jump) {
+            cpu->pc = v;
+            return 16;
+        }
+        return 12;
     } else if (b == 0x18) {
         // JR e
         int16_t e = (int16_t) ((int8_t) GET8(cpu, cpu->pc++)) + 2;
