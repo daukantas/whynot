@@ -356,6 +356,17 @@ int step(cpu_t *cpu) {
 
         // no flags set
         return 12;
+    } else if (b == 0x08) {
+        // LD (nn),SP
+        uint16_t v = GET8(cpu, cpu->pc++);
+        v |= GET8(cpu, cpu->pc++) << 8;
+        DIS { printf("LD ($%04x),SP\n", v); }
+
+        SET8(cpu, v, cpu->sp & 0xff);
+        SET8(cpu, v + 1, cpu->sp >> 8);
+
+        // no flags set
+        return 20;
     } else if ((b & 0xf8) == 0x80) {
         // ADD A,r
         uint8_t r = b & 0x7;
