@@ -568,6 +568,21 @@ int step(cpu_t *cpu) {
 
             cpu->fz = v == 0;
             return r == 0x6 ? 16 : 8;
+        } else if ((b & 0xf8) == 0x18) {
+            // RR r
+            uint8_t r = b & 0x7;
+            DIS { printf("RR %s\n", REG8N(r)); }
+            uint8_t v = REG8(cpu, r),
+                    old_fc = cpu->fc;
+
+            cpu->f = 0;
+            cpu->fc = (v & 0x1) == 0x1;
+
+            v = ((v & 0xfe) >> 1) | (old_fc << 7);
+            SREG8(cpu, r, v);
+
+            cpu->fz = v == 0;
+            return r == 0x6 ? 16 : 8;
         } else if ((b & 0xc0) == 0x40) {
             // BIT b,r
             uint8_t bit = (b >> 3) & 0x7,
