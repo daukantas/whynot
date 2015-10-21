@@ -737,6 +737,18 @@ int step(cpu_t *cpu) {
         PUSH16(cpu, cpu->pc);
         cpu->pc = t * 8;
         return 16;
+    } else if (b == 0x3f) {
+        // CCF
+        DIS { printf("CCF\n"); }
+        cpu->fn = cpu->fh = 0;
+        cpu->fc = !cpu->fc;
+        return 4;
+    } else if (b == 0x37) {
+        // SCF
+        DIS { printf("SCF\n"); }
+        cpu->fn = cpu->fh = 0;
+        cpu->fc = 1;
+        return 4;
     } else if (b == 0x00) {
         // NOP
         DIS { printf("NOP\n"); }
