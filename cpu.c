@@ -302,6 +302,20 @@ int step(cpu_t *cpu) {
 
         // no flags set
         return 8;
+    } else if (b == 0x02) {
+        // LD (BC),A
+        DIS { printf("LD (BC),A\n"); }
+        SET8(cpu, cpu->bc, cpu->a);
+
+        // no flags set
+        return 8;
+    } else if (b == 0x12) {
+        // LD (DE),A
+        DIS { printf("LD (DE),A\n"); }
+        SET8(cpu, cpu->de, cpu->a);
+
+        // no flags set
+        return 8;
     } else if (b == 0x22) {
         // LD (HL+),A
         DIS { printf("LD (HL+),A\n"); }
@@ -423,6 +437,16 @@ int step(cpu_t *cpu) {
         cpu->fn = 1;
         cpu->fh = (((int) cpu->a & 0xf) - ((int) n & 0xf)) < 0;  // ?
         cpu->fc = cpu->a > n;
+        return 8;
+    } else if ((b & 0xcf) == 0x09) {
+        // ADD HL,ss
+        uint8_t r = (b >> 4) & 0x3;
+        DIS { printf("ADD HL,%s\n", REG16N(r)); }
+        uint16_t n = REG16(cpu, r);
+        cpu->fh = (((n & 0xfff) + (cpu->hl & 0xfff)) & 0x1000) == 0x1000;
+        cpu->fn = 0;
+        cpu->fc = ((uint32_t) n) + ((uint32_t) cpu->hl) > 0xffff;
+        cpu->hl += n;
         return 8;
     } else if ((b & 0xc7) == 0x04) {
         // INC r
