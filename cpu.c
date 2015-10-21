@@ -270,6 +270,15 @@ int step(cpu_t *cpu) {
 
         // no flags set
         return 12;
+    } else if (b == 0xfa) {
+        // LD A,(nn)
+        uint16_t v = GET8(cpu, cpu->pc++);
+        v |= GET8(cpu, cpu->pc++) << 8;
+        DIS { printf("LD A,($%04x)\n", v); }
+        cpu->a = GET8(cpu, v);
+
+        // no flags set
+        return 16;
     } else if (b == 0xea) {
         // LD (nn),A
         uint16_t v = GET8(cpu, cpu->pc++);
@@ -279,6 +288,20 @@ int step(cpu_t *cpu) {
 
         // no flags set
         return 16;
+    } else if (b == 0x2a) {
+        // LD A,(HL+)
+        DIS { printf("LD A,(HL+)\n"); }
+        cpu->a = GET8(cpu, cpu->hl++);
+
+        // no flags set
+        return 8;
+    } else if (b == 0x3a) {
+        // LD A,(HL-)
+        DIS { printf("LD A,(HL-)\n"); }
+        cpu->a = GET8(cpu, cpu->hl--);
+
+        // no flags set
+        return 8;
     } else if (b == 0x22) {
         // LD (HL+),A
         DIS { printf("LD (HL+),A\n"); }
@@ -341,6 +364,16 @@ int step(cpu_t *cpu) {
         cpu->fh = (((int) cpu->a & 0xf) - ((int) n & 0xf)) < 0;  // ?
         cpu->fc = cpu->a > n;
         cpu->a -= n;
+        return r == 0x6 ? 8 : 4;
+    } else if ((b & 0xf8) == 0xa0) {
+        // AND r
+        uint8_t r = b & 0x7;
+        DIS { printf("AND %s\n", REG8N(r)); }
+
+        cpu->a &= REG8(cpu, r);
+        cpu->f = 0;
+        cpu->fh = 1;
+        cpu->fz = cpu->a == 0;
         return r == 0x6 ? 8 : 4;
     } else if (b == 0xe6) {
         // AND n
@@ -536,6 +569,10 @@ int step(cpu_t *cpu) {
     } else if (b == 0xf3) {
         // DI
         DIS { printf("DI\n"); }
+        return 4;
+    } else if (b == 0xfb) {
+        // EI
+        DIS { printf("EI\n"); }
         return 4;
     }
 
