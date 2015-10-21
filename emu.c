@@ -110,14 +110,13 @@ int main(int argc, char **argv) {
 }
 
 void lcdc_step(cpu_t *cpu, SDL_Window *window, int t);
+void nr_step(cpu_t *cpu, FMOD_SYSTEM *system, int t);
 
 int total_vblanks = 0;
 Uint32 start_ticks = 0;
 
-FMOD_DSP *dsp1;
-FMOD_CHANNEL *channel1;
-Uint32 start1 = 0;
-int vol1;
+FMOD_DSP *nr1_dsp;
+FMOD_CHANNEL *nr1_channel;
 
 int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
     dump(cpu);
@@ -130,8 +129,8 @@ int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
     int last_elapsed = 0;
     start_ticks = SDL_GetTicks();
 
-    FMOD_System_CreateDSPByType(system, FMOD_DSP_TYPE_OSCILLATOR, &dsp1);
-    FMOD_DSP_SetParameterInt(dsp1, FMOD_DSP_OSCILLATOR_TYPE, 1);
+    FMOD_System_CreateDSPByType(system, FMOD_DSP_TYPE_OSCILLATOR, &nr1_dsp);
+    FMOD_DSP_SetParameterInt(nr1_dsp, FMOD_DSP_OSCILLATOR_TYPE, 1);
 
     while (running) {
         SDL_Event event;
@@ -155,10 +154,6 @@ int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
             }
         }
 
-        // TODO: once per vblank?
-        FMOD_RESULT result = FMOD_System_Update(system);
-        fmod_error_check(result);
-
         int t = step(cpu);
         if (t == -1) {
             running = 0;
@@ -167,33 +162,7 @@ int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
             elapsed += t;
         }
 
-        Uint32 now = SDL_GetTicks();
-
-        if (cpu->nr14 & 0x80) {
-            cpu->nr14 &= ~0x80;
-            int n = ((cpu->nr14 & 0x7) << 8) + cpu->nr13;
-            FMOD_DSP_SetParameterFloat(dsp1, FMOD_DSP_OSCILLATOR_RATE, 131072 / (2048 - n));
-            FMOD_System_PlayDSP(system, dsp1, NULL, 0, &channel1);
-
-            start1 = now;
-            vol1 = cpu->nr12 >> 4;
-        }
-        
-        if (start1) {
-            int steplen = 1000 / 64 * (cpu->nr12 & 0x7);  // steplen/64 sec
-            while (vol1 && start1 + steplen < now) {
-                start1 += steplen;
-                --vol1;
-            }
-            if (!vol1) {
-                FMOD_Channel_Stop(channel1);
-                start1 = 0;
-            } else {
-                FMOD_Channel_SetVolume(channel1, ((float) vol1) / 16.0f);
-            }
-        }
-
-
+        nr_step(cpu, system, t);
         lcdc_step(cpu, window, t);
 
         if (elapsed > last_elapsed + 100000) {
@@ -209,6 +178,52 @@ int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
     }
 
     return retval;
+}
+
+int nr1_on;
+int nr1_elapsed;
+int nr1_vol;
+int nr1_step;
+int nr1_envelope;
+
+void nr_step(cpu_t *cpu, FMOD_SYSTEM *system, int t) {
+    if (cpu->nr14 & 0x80) {
+        cpu->nr14 &= ~0x80;
+        int n = ((cpu->nr14 & 0x7) << 8) + cpu->nr13;
+        FMOD_DSP_SetParameterFloat(nr1_dsp, FMOD_DSP_OSCILLATOR_RATE, 131072 / (2048 - n));
+        FMOD_System_PlayDSP(system, nr1_dsp, NULL, 0, &nr1_channel);
+
+        nr1_on = 1;
+        nr1_elapsed = -t;
+
+        // All initialised once.
+        nr1_vol = cpu->nr12 >> 4;
+        nr1_step = 1000 * 64 * (cpu->nr12 & 0x7);  // @4MHz
+        nr1_envelope = (cpu->nr12 & 0x8) == 0x8;
+    }
+    
+    if (nr1_on) {
+        nr1_elapsed += t;
+
+        if (nr1_envelope) {
+            while (nr1_vol < 15 && nr1_elapsed > nr1_step) {
+                nr1_elapsed -= nr1_step;
+                ++nr1_vol;
+            }
+        } else {
+            while (nr1_vol && nr1_elapsed > nr1_step) {
+                nr1_elapsed -= nr1_step;
+                --nr1_vol;
+            }
+        }
+
+        if (!nr1_vol && !nr1_envelope) {
+            FMOD_Channel_Stop(nr1_channel);
+            nr1_on = 0;
+        } else {
+            FMOD_Channel_SetVolume(nr1_channel, ((float) nr1_vol) / 15.0f);
+        }
+    }
 }
 
 void lcdc_step(cpu_t *cpu, SDL_Window *window, int t) {
