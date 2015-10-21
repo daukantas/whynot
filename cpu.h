@@ -37,6 +37,11 @@ typedef struct {
 
     uint8_t rom[0x100], ram[0x10000], *cart;
 
+    int rom_lock;
+
+    // MBC3
+    int rom_bank_selected;
+
     int nr11, nr12, nr13, nr14;
 
     int lcdc;

@@ -9,9 +9,9 @@ void cpu_init(cpu_t *cpu, uint8_t const *rom, uint8_t *cart) {
     memcpy(cpu->rom, rom, 256);
     cpu->cart = cart;
     cpu->pc = 0;
+    cpu->rom_lock = 1;
     cpu->lcdc = 0x83;
     cpu->lcdc_bgp = 0xd4;
-    SET8(cpu, 0xff50, 0);
 }
 
 void dump(cpu_t const *cpu) {
@@ -30,10 +30,12 @@ void dump(cpu_t const *cpu) {
 }
 
 uint8_t GET8(cpu_t const *cpu, uint16_t addr) {
-    if (addr < 0x100 && cpu->ram[0xff50] == 0x00) {
+    if (addr < 0x100 && cpu->rom_lock) {
         return cpu->rom[addr];
-    } else if (addr < 0x8000) {
+    } else if (addr < 0x4000) {
         return cpu->cart[addr];
+    } else if (addr >= 0x4000 & addr < 0x8000) {
+        return cpu->cart[addr + cpu->rom_bank_selected * 0x4000];
     } else if (addr == 0xff11) {
         // NR11
         return cpu->nr11;
@@ -70,12 +72,34 @@ uint8_t GET8(cpu_t const *cpu, uint16_t addr) {
 
 void SET8(cpu_t *cpu, uint16_t addr, uint8_t v) {
     if (addr == 0xff50) {
-        if (v == 0) {
-            printf("prevent reset of FF50\n");
-            return;
+        if (v != 0) {
+            cpu->rom_lock = 0;
+            printf("DMG ROM overlay removed\n");
         }
-        printf("DMG ROM overlay <- %02x\n", v);
+        return;
     }
+
+    // MBC3-specific so far
+    if (addr >= 0x0000 & addr <= 0x1fff) {
+        printf("write $%02x to $%04x\n", v, addr);
+        exit(1);
+    }
+
+    if (addr >= 0x2000 && addr <= 0x3fff) {
+        cpu->rom_bank_selected = v & 0x7f;
+        return;
+    }
+
+    if (addr >= 0x4000 && addr <= 0x5fff) {
+        printf("write $%02x to $%04x\n", v, addr);
+        exit(1);
+    }
+
+    if (addr >= 0x6000 && addr <= 0x7fff) {
+        printf("write $%02x to $%04x\n", v, addr);
+        exit(1);
+    }
+
     if (addr == 0xff11) {
         // NR11
         cpu->nr11 = v;
