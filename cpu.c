@@ -272,6 +272,13 @@ int step(cpu_t *cpu) {
 
         // no flags set
         return 8;
+    } else if (b == 0x0a) {
+        // LD A,(BC)
+        DIS { printf("LD A,(BC)\n"); }
+        cpu->a = GET8(cpu, cpu->bc);
+
+        // no flags set
+        return 8;
     } else if (b == 0x1a) {
         // LD A,(DE)
         DIS { printf("LD A,(DE)\n"); }
