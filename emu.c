@@ -129,6 +129,7 @@ int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
     int elapsed = 0;
     int last_elapsed = 0;
     start_ticks = SDL_GetTicks();
+    Uint32 report_ticks = start_ticks;
 
     FMOD_System_CreateDSPByType(system, FMOD_DSP_TYPE_OSCILLATOR, &nr1_dsp);
     FMOD_DSP_SetParameterInt(nr1_dsp, FMOD_DSP_OSCILLATOR_TYPE, 1);
@@ -174,7 +175,9 @@ int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
         nr_step(cpu, system, t);
         lcdc_step(cpu, window, t);
 
-        if (elapsed > last_elapsed + 100000) {
+        Uint32 now = SDL_GetTicks();
+        if (report_ticks + 1000 < now) {
+            report_ticks += 1000;
             last_elapsed = elapsed;
             double secs = ((double) elapsed) / 4194300;
             double real_elapsed = (double) (SDL_GetTicks() - start_ticks) / 1000;
@@ -197,6 +200,7 @@ int nr1_envelope;
 
 void nr_step(cpu_t *cpu, FMOD_SYSTEM *system, int t) {
     if (cpu->nr14 & 0x80) {
+        // FMOD doesn't let us specify a duty cycle, so uhhhh.
         cpu->nr14 &= ~0x80;
         int n = ((cpu->nr14 & 0x7) << 8) + cpu->nr13;
         FMOD_DSP_SetParameterFloat(nr1_dsp, FMOD_DSP_OSCILLATOR_RATE, 131072 / (2048 - n));
