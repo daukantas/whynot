@@ -528,6 +528,13 @@ int step(cpu_t *cpu) {
             cpu->fn = 0;
             cpu->fh = 1;
             return r == 0x6 ? 12 : 8;
+        } else if ((b & 0xc0) == 0xc0) {
+            // SET b,r
+            uint8_t bit = (b >> 3) & 0x7,
+                    r = b & 0x7;
+            DIS { printf("RES %d,%s\n", bit, REG8N(r)); }
+            SREG8(cpu, r, REG8(cpu, r) | (1 << bit));
+            return r == 0x6 ? 16 : 8;
         } else if ((b & 0xc0) == 0x80) {
             // RES b,r
             uint8_t bit = (b >> 3) & 0x7,
@@ -536,7 +543,7 @@ int step(cpu_t *cpu) {
             SREG8(cpu, r, REG8(cpu, r) & ~(1 << bit));
             return r == 0x6 ? 16 : 8;
         } else {
-            fprintf(stderr, "unknown cb opcode: %x\n", b);
+            fprintf(stderr, "unknown CB opcode: %x\n", b);
             dump(cpu);
             return -1;
         }
