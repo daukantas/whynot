@@ -596,8 +596,9 @@ int step(cpu_t *cpu) {
 
         if (do_jump) {
             cpu->pc += (-2) + e;
+            return 12;
         }
-        return 6;
+        return 8;
     } else if (b == 0xcd) {
         // CALL nn
         uint16_t v = GET8(cpu, cpu->pc++);
@@ -630,10 +631,11 @@ int step(cpu_t *cpu) {
 
         if (do_jump) {
             cpu->pc = POP16(cpu);
+            return 20;
         }
 
         // no flags set
-        return 10;
+        return 8;
     } else if ((b & 0xc7) == 0xc7) {
         // RST t
         uint8_t t = (b >> 3) & 0x7;
