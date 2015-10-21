@@ -69,8 +69,12 @@ uint8_t GET8(cpu_t const *cpu, uint16_t addr) {
 }
 
 void SET8(cpu_t *cpu, uint16_t addr, uint8_t v) {
-    if (addr == 0xff50 && v != 0) {
-        printf("DMG ROM overlay disabled\n");
+    if (addr == 0xff50) {
+        if (v == 0) {
+            printf("prevent reset of FF50\n");
+            return;
+        }
+        printf("DMG ROM overlay <- %02x\n", v);
     }
     if (addr == 0xff11) {
         // NR11
