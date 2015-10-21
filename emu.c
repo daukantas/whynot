@@ -113,6 +113,7 @@ void lcdc_step(cpu_t *cpu, SDL_Window *window, int t);
 void nr_step(cpu_t *cpu, FMOD_SYSTEM *system, int t);
 
 int total_vblanks = 0;
+int did_vblank = 0;
 Uint32 start_ticks = 0;
 
 FMOD_DSP *nr1_dsp;
@@ -131,27 +132,35 @@ int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
 
     FMOD_System_CreateDSPByType(system, FMOD_DSP_TYPE_OSCILLATOR, &nr1_dsp);
     FMOD_DSP_SetParameterInt(nr1_dsp, FMOD_DSP_OSCILLATOR_TYPE, 1);
+    
+    // Note: we're not even bothering to run FMOD_System_Update, as we don't
+    // use 3D sound, virtual voices, _NRT outputs, streams, callbacks, or
+    // FMOD_NONBLOCKING.
 
     while (running) {
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
-                case SDL_KEYDOWN:
-                    if (event.key.repeat) {
+        if (did_vblank) {
+            SDL_Event event;
+            while (SDL_PollEvent(&event)) {
+                switch (event.type) {
+                    case SDL_KEYDOWN:
+                        if (event.key.repeat) {
+                            break;
+                        }
+
+                        // keydown(event.key.keysym.sym);
                         break;
-                    }
 
-                    // keydown(event.key.keysym.sym);
-                    break;
+                    case SDL_KEYUP:
+                        // keyup(event.key.keysym.sym);
+                        break;
 
-                case SDL_KEYUP:
-                    // keyup(event.key.keysym.sym);
-                    break;
-
-                case SDL_QUIT:
-                    running = 0;
-                    break;
+                    case SDL_QUIT:
+                        running = 0;
+                        break;
+                }
             }
+
+            did_vblank = 0;
         }
 
         int t = step(cpu);
@@ -237,6 +246,7 @@ void lcdc_step(cpu_t *cpu, SDL_Window *window, int t) {
 
         if (cpu->lcdc_line == 143) {
             cpu->lcdc_mode = 1;  // vblank
+            did_vblank = 1;
             ++total_vblanks;
 
             glClearColor(
