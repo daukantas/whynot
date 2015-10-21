@@ -352,6 +352,15 @@ int step(cpu_t *cpu) {
         cpu->fh = 1;
         cpu->fz = cpu->a == 0;
         return 8;
+    } else if ((b & 0xf8) == 0xb0) {
+        // OR r
+        uint8_t r = b & 0x7;
+        DIS { printf("OR %s\n", REG8N(r)); }
+
+        cpu->a |= REG8(cpu, r);
+        cpu->f = 0;
+        cpu->fz = cpu->a == 0;
+        return r == 0x6 ? 8 : 4;
     } else if ((b & 0xf8) == 0xa8) {
         // XOR r
         uint8_t r = b & 0x7;
