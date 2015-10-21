@@ -770,9 +770,10 @@ int step(cpu_t *cpu) {
     } else if ((b & 0xc7) == 0xc7) {
         // RST t
         uint8_t t = (b >> 3) & 0x7;
-        // no flags set
+        DIS { printf("RST %d\n", t); }
         PUSH16(cpu, cpu->pc);
         cpu->pc = t * 8;
+        // no flags set
         return 16;
     } else if (b == 0x3f) {
         // CCF
