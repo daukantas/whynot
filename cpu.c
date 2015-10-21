@@ -585,6 +585,8 @@ int step(cpu_t *cpu) {
         // RET
         DIS { printf("RET\n"); }
         cpu->pc = POP16(cpu);
+
+        // no flags set
         return 16;
     } else if ((b & 0xe7) == 0xc0) {
         // RET cc
@@ -602,18 +604,30 @@ int step(cpu_t *cpu) {
         if (do_jump) {
             cpu->pc = POP16(cpu);
         }
+
+        // no flags set
         return 10;
+    } else if ((b & 0xc7) == 0xc7) {
+        // RST t
+        uint8_t t = (b >> 3) & 0x7;
+        // no flags set
+        PUSH16(cpu, cpu->pc);
+        cpu->pc = t * 8;
+        return 16;
     } else if (b == 0x00) {
         // NOP
         DIS { printf("NOP\n"); }
+        // no flags set
         return 4;
     } else if (b == 0xf3) {
         // DI
         DIS { printf("DI\n"); }
+        // no flags set
         return 4;
     } else if (b == 0xfb) {
         // EI
         DIS { printf("EI\n"); }
+        // no flags set
         return 4;
     }
 
