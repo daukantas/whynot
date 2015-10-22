@@ -740,7 +740,20 @@ int step(cpu_t *cpu) {
         return 4;
     } else if (b == 0xcb) {
         b = GET8(cpu, cpu->pc++);
-        if ((b & 0xf8) == 0x10) {
+        if ((b & 0xf8) == 0x00) {
+            // RLC r
+            uint8_t r = b & 0x7;
+            DIS { printf("RLC %s\n", REG8N(r)); }
+            uint8_t v = REG8(cpu, r);
+            cpu->f = 0;
+            cpu->fc = (v & 0x80) == 0x80;
+
+            v = ((v & 0x7f) << 1) | (v >> 7);
+            SREG8(cpu, r, v);
+
+            cpu->fz = v == 0;
+            return r == 0x6 ? 16 : 8;
+        } else if ((b & 0xf8) == 0x10) {
             // RL r
             uint8_t r = b & 0x7;
             DIS { printf("RL %s\n", REG8N(r)); }
@@ -751,6 +764,19 @@ int step(cpu_t *cpu) {
             cpu->fc = (v & 0x80) == 0x80;
 
             v = ((v & 0x7f) << 1) | old_fc;
+            SREG8(cpu, r, v);
+
+            cpu->fz = v == 0;
+            return r == 0x6 ? 16 : 8;
+        } else if ((b & 0xf8) == 0x08) {
+            // RRC r
+            uint8_t r = b & 0x7;
+            DIS { printf("RRC %s\n", REG8N(r)); }
+            uint8_t v = REG8(cpu, r);
+            cpu->f = 0;
+            cpu->fc = (v & 0x1) == 0x1;
+
+            v = ((v & 0xfe) >> 1) | ((v & 0x1) << 7);
             SREG8(cpu, r, v);
 
             cpu->fz = v == 0;
