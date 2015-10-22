@@ -44,7 +44,10 @@ typedef struct {
     // MBC3
     int rom_bank_selected;
 
-    int nr11, nr12, nr13, nr14;
+    uint8_t nr11, nr12, nr13, nr14;
+    uint8_t nr21, nr22, nr23, nr24;
+    uint8_t nr30, nr31, nr32, nr33, nr34;
+    uint8_t nr41, nr42, nr43, nr44;
 
     int lcdc;
     int lcdc_mode;

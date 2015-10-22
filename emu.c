@@ -116,8 +116,8 @@ int total_vblanks = 0;
 int did_vblank = 0;
 Uint32 start_ticks = 0;
 
-FMOD_DSP *nr1_dsp;
-FMOD_CHANNEL *nr1_channel;
+FMOD_DSP *nr1_dsp, *nr2_dsp, *nr3_dsp, *nr4_dsp;
+FMOD_CHANNEL *nr1_channel = 0, *nr2_channel = 0, *nr3_channel = 0, *nr4_channel = 0;
 
 int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
     dump(cpu);
@@ -133,6 +133,10 @@ int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
 
     FMOD_System_CreateDSPByType(system, FMOD_DSP_TYPE_OSCILLATOR, &nr1_dsp);
     FMOD_DSP_SetParameterInt(nr1_dsp, FMOD_DSP_OSCILLATOR_TYPE, 1);
+    FMOD_System_CreateDSPByType(system, FMOD_DSP_TYPE_OSCILLATOR, &nr2_dsp);
+    FMOD_DSP_SetParameterInt(nr2_dsp, FMOD_DSP_OSCILLATOR_TYPE, 1);
+    FMOD_System_CreateDSPByType(system, FMOD_DSP_TYPE_OSCILLATOR, &nr4_dsp);
+    FMOD_DSP_SetParameterInt(nr4_dsp, FMOD_DSP_OSCILLATOR_TYPE, 5);
     
     // Note: we're not even bothering to run FMOD_System_Update, as we don't
     // use 3D sound, virtual voices, _NRT outputs, streams, callbacks, or
@@ -192,51 +196,84 @@ int run(cpu_t *cpu, SDL_Window *window, FMOD_SYSTEM *system) {
     return retval;
 }
 
-int nr1_on;
-int nr1_elapsed;
-int nr1_vol;
-int nr1_step;
-int nr1_envelope;
+struct sound_props {
+    int on, elapsed, vol, step, envelope;
+} nr1, nr2, nr4;
+
+static void wave_init(uint8_t *reg2, uint8_t *reg3, uint8_t *reg4, FMOD_SYSTEM *system, FMOD_DSP *dsp, FMOD_CHANNEL **channel, struct sound_props *props, int t) {
+    if (!(*reg4 & 0x80)) {
+        return;
+    }
+
+    // FMOD doesn't let us specify a duty cycle, so uhhhh.
+    *reg4 &= ~0x80;
+    int n = ((*reg4 & 0x7) << 8) + *reg3;
+    FMOD_DSP_SetParameterFloat(dsp, FMOD_DSP_OSCILLATOR_RATE, 131072 / (2048 - n));
+    if (*channel) {
+        FMOD_Channel_Stop(*channel);
+    }
+    FMOD_System_PlayDSP(system, dsp, NULL, 0, channel);
+
+    props->on = 1;
+    props->elapsed = -t;
+
+    // All initialised once.
+    props->vol = *reg2 >> 4;
+    props->step = 1000 * 64 * (*reg2 & 0x7);  // @4MHz
+    props->envelope = (*reg2 & 0x8) == 0x8;
+}
+
+static void envelope(struct sound_props *props, FMOD_CHANNEL *channel, int t) {
+    if (!props->on) {
+        return;
+    }
+
+    props->elapsed += t;
+
+    if (props->envelope) {
+        while (props->vol < 15 && props->elapsed > props->step) {
+            props->elapsed -= props->step;
+            ++props->vol;
+        }
+    } else {
+        while (props->vol && props->elapsed > props->step) {
+            props->elapsed -= props->step;
+            --props->vol;
+        }
+    }
+
+    if (!props->vol && !props->envelope) {
+        FMOD_Channel_Stop(channel);
+        props->on = 0;
+    } else {
+        FMOD_Channel_SetVolume(channel, ((float) props->vol) / 15.0f);
+    }
+}
 
 void nr_step(cpu_t *cpu, FMOD_SYSTEM *system, int t) {
-    if (cpu->nr14 & 0x80) {
-        // FMOD doesn't let us specify a duty cycle, so uhhhh.
-        cpu->nr14 &= ~0x80;
-        int n = ((cpu->nr14 & 0x7) << 8) + cpu->nr13;
-        FMOD_DSP_SetParameterFloat(nr1_dsp, FMOD_DSP_OSCILLATOR_RATE, 131072 / (2048 - n));
-        FMOD_System_PlayDSP(system, nr1_dsp, NULL, 0, &nr1_channel);
+    wave_init(&cpu->nr12, &cpu->nr13, &cpu->nr14, system, nr1_dsp, &nr1_channel, &nr1, t);
+    envelope(&nr1, nr1_channel, t);
 
-        nr1_on = 1;
-        nr1_elapsed = -t;
+    wave_init(&cpu->nr22, &cpu->nr23, &cpu->nr24, system, nr2_dsp, &nr2_channel, &nr2, t);
+    envelope(&nr2, nr2_channel, t);
 
-        // All initialised once.
-        nr1_vol = cpu->nr12 >> 4;
-        nr1_step = 1000 * 64 * (cpu->nr12 & 0x7);  // @4MHz
-        nr1_envelope = (cpu->nr12 & 0x8) == 0x8;
-    }
-    
-    if (nr1_on) {
-        nr1_elapsed += t;
+    if (cpu->nr34 & 0x80) { printf("NR34 init\n"); }
 
-        if (nr1_envelope) {
-            while (nr1_vol < 15 && nr1_elapsed > nr1_step) {
-                nr1_elapsed -= nr1_step;
-                ++nr1_vol;
-            }
-        } else {
-            while (nr1_vol && nr1_elapsed > nr1_step) {
-                nr1_elapsed -= nr1_step;
-                --nr1_vol;
-            }
+    if (cpu->nr44 & 0x80) {
+        if (nr4_channel) {
+            FMOD_Channel_Stop(nr4_channel);
         }
+        FMOD_System_PlayDSP(system, nr4_dsp, NULL, 0, &nr4_channel);
 
-        if (!nr1_vol && !nr1_envelope) {
-            FMOD_Channel_Stop(nr1_channel);
-            nr1_on = 0;
-        } else {
-            FMOD_Channel_SetVolume(nr1_channel, ((float) nr1_vol) / 15.0f);
-        }
+        nr4.on = 1;
+        nr4.elapsed = -t;
+
+        nr4.vol = cpu->nr42 >> 4;
+        nr4.step = 1000 * 64 * (cpu->nr42 & 0x7);  // @4MHz
+        nr4.envelope = (cpu->nr42 & 0x8) == 0x8;
     }
+
+    envelope(&nr4, nr4_channel, t);
 }
 
 void lcdc_step(cpu_t *cpu, SDL_Window *window, int t) {

@@ -90,6 +90,45 @@ uint8_t GET8(cpu_t const *cpu, uint16_t addr) {
     } else if (addr == 0xff14) {
         // NR14
         return cpu->nr14;
+    } else if (addr == 0xff16) {
+        // NR21
+        return cpu->nr21;
+    } else if (addr == 0xff17) {
+        // NR22
+        return cpu->nr22;
+    } else if (addr == 0xff18) {
+        // NR23
+        return cpu->nr23;
+    } else if (addr == 0xff19) {
+        // NR24
+        return cpu->nr24;
+    } else if (addr == 0xff1a) {
+        // NR30
+        return cpu->nr30;
+    } else if (addr == 0xff1b) {
+        // NR31
+        return cpu->nr31;
+    } else if (addr == 0xff1c) {
+        // NR32
+        return cpu->nr32;
+    } else if (addr == 0xff1d) {
+        // NR33
+        return cpu->nr33;
+    } else if (addr == 0xff1e) {
+        // NR34
+        return cpu->nr34;
+    } else if (addr == 0xff20) {
+        // NR41
+        return cpu->nr41;
+    } else if (addr == 0xff21) {
+        // NR42
+        return cpu->nr42;
+    } else if (addr == 0xff22) {
+        // NR43
+        return cpu->nr43;
+    } else if (addr == 0xff23) {
+        // NR44
+        return cpu->nr44;
     } else if (addr == 0xff40) {
         // LCDC
         return cpu->lcdc;
@@ -158,6 +197,45 @@ void SET8(cpu_t *cpu, uint16_t addr, uint8_t v) {
     } else if (addr == 0xff14) {
         // NR14
         cpu->nr14 = v;
+    } else if (addr == 0xff16) {
+        // NR21
+        cpu->nr21 = v;
+    } else if (addr == 0xff17) {
+        // NR22
+        cpu->nr22 = v;
+    } else if (addr == 0xff18) {
+        // NR23
+        cpu->nr23 = v;
+    } else if (addr == 0xff19) {
+        // NR24
+        cpu->nr24 = v;
+    } else if (addr == 0xff1a) {
+        // NR30
+        cpu->nr30 = v;
+    } else if (addr == 0xff1b) {
+        // NR31
+        cpu->nr31 = v;
+    } else if (addr == 0xff1c) {
+        // NR32
+        cpu->nr32 = v;
+    } else if (addr == 0xff1d) {
+        // NR33
+        cpu->nr33 = v;
+    } else if (addr == 0xff1e) {
+        // NR34
+        cpu->nr34 = v;
+    } else if (addr == 0xff20) {
+        // NR41
+        cpu->nr41 = v;
+    } else if (addr == 0xff21) {
+        // NR42
+        cpu->nr42 = v;
+    } else if (addr == 0xff22) {
+        // NR43
+        cpu->nr43 = v;
+    } else if (addr == 0xff23) {
+        // NR44
+        cpu->nr44 = v;
     } else if (addr == 0xff40) {
         // LCDC
         cpu->lcdc = v;
