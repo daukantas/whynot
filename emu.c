@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
     uint8_t *rom, *cart;
     long romlen, cartlen;
     read_file("DMG_ROM.bin", &rom, &romlen);
-    read_file("red.gb", &cart, &cartlen);
+    read_file(argv[1], &cart, &cartlen);
 
     if (romlen != 256) {
         fprintf(stderr, "ROM not 256 bytes; aborting\n");
