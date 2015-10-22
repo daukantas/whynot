@@ -567,6 +567,16 @@ int step(cpu_t *cpu) {
         cpu->fz = cpu->a == 0;
         cpu->fn = 0;
         return r == 0x6 ? 8 : 4;
+    } else if (b == 0xc6) {
+        // ADD A,n
+        uint8_t v = GET8(cpu, cpu->pc++);
+        DIS { printf("ADD A,$%02x\n", v); }
+        cpu->fh = (((cpu->a & 0xf) + (v & 0xf)) & 0x10) == 0x10;
+        cpu->fc = ((uint16_t) cpu->a) + ((uint16_t) v) > 0xff;
+        cpu->a += v;
+        cpu->fz = cpu->a == 0;
+        cpu->fn = 0;
+        return 8;
     } else if ((b & 0xf8) == 0x90) {
         // SUB r
         uint8_t r = b & 0x7;
@@ -579,6 +589,17 @@ int step(cpu_t *cpu) {
         cpu->fc = cpu->a > n;
         cpu->a -= n;
         return r == 0x6 ? 8 : 4;
+    } else if (b == 0xd6) {
+        // SUB n
+        uint8_t v = GET8(cpu, cpu->pc++);
+        DIS { printf("SUB $%02x\n", v); }
+
+        cpu->fz = cpu->a == v;
+        cpu->fn = 1;
+        cpu->fh = (((int) cpu->a & 0xf) - ((int) v & 0xf)) < 0;  // ?
+        cpu->fc = cpu->a > v;
+        cpu->a -= v;
+        return 8;
     } else if ((b & 0xf8) == 0xa0) {
         // AND r
         uint8_t r = b & 0x7;
