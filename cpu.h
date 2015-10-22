@@ -39,6 +39,8 @@ typedef struct {
 
     int rom_lock;
 
+    int mbc;
+
     // MBC3
     int rom_bank_selected;
 

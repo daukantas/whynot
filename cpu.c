@@ -13,6 +13,39 @@ void cpu_init(cpu_t *cpu, uint8_t const *rom, uint8_t *cart) {
     cpu->rom_bank_selected = 1;
     cpu->lcdc = 0x83;
     cpu->lcdc_bgp = 0xd4;
+
+    switch (rom[0x0147]) {
+    case 0x00:
+        cpu->mbc = 0;
+        break;
+    case 0x01:
+    case 0x02:
+    case 0x03:
+        cpu->mbc = 1;
+        break;
+    case 0x05:
+    case 0x06:
+        cpu->mbc = 2;
+        break;
+    case 0x0f:
+    case 0x10:
+    case 0x11:
+    case 0x12:
+    case 0x13:
+        cpu->mbc = 3;
+        break;
+    case 0x19:
+    case 0x1a:
+    case 0x1b:
+    case 0x1c:
+    case 0x1d:
+    case 0x1e:
+        cpu->mbc = 5;
+        break;
+    default:
+        fprintf(stderr, "unknown MBC %02x\n", rom[0x0147]);
+        exit(1);
+    }
 }
 
 void dump(cpu_t const *cpu) {
@@ -80,28 +113,29 @@ void SET8(cpu_t *cpu, uint16_t addr, uint8_t v) {
         return;
     }
 
-    // MBC3-specific so far
-    if (addr >= 0x0000 & addr <= 0x1fff) {
-        printf("write $%02x to $%04x\n", v, addr);
-        exit(1);
-    }
-
-    if (addr >= 0x2000 && addr <= 0x3fff) {
-        cpu->rom_bank_selected = v & 0x7f;
-        if (!cpu->rom_bank_selected) {
-            cpu->rom_bank_selected = 1;
+    if (cpu->mbc == 3) {
+        if (addr >= 0x0000 & addr <= 0x1fff) {
+            printf("write $%02x to $%04x\n", v, addr);
+            exit(1);
         }
-        return;
-    }
 
-    if (addr >= 0x4000 && addr <= 0x5fff) {
-        printf("write $%02x to $%04x\n", v, addr);
-        exit(1);
-    }
+        if (addr >= 0x2000 && addr <= 0x3fff) {
+            cpu->rom_bank_selected = v & 0x7f;
+            if (!cpu->rom_bank_selected) {
+                cpu->rom_bank_selected = 1;
+            }
+            return;
+        }
 
-    if (addr >= 0x6000 && addr <= 0x7fff) {
-        printf("write $%02x to $%04x\n", v, addr);
-        exit(1);
+        if (addr >= 0x4000 && addr <= 0x5fff) {
+            printf("write $%02x to $%04x\n", v, addr);
+            exit(1);
+        }
+
+        if (addr >= 0x6000 && addr <= 0x7fff) {
+            printf("write $%02x to $%04x\n", v, addr);
+            exit(1);
+        }
     }
 
     if (addr == 0xff11) {
