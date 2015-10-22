@@ -382,7 +382,6 @@ void lcdc_step(cpu_t *cpu, SDL_Window *window, int t) {
             glEnd();
         }
 
-        /*
         if (cpu->lcdc & LCDC_OBJ_ON) {
             for (int i = 0; i < 40; ++i) {
                 struct {
@@ -407,7 +406,6 @@ void lcdc_step(cpu_t *cpu, SDL_Window *window, int t) {
                 }
             }
         }
-        */
     }
 }
 

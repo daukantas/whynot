@@ -367,7 +367,7 @@ uint16_t POP16(cpu_t *cpu) {
 }
 
 static int show_dis = 0;
-#define DIS if (show_dis)
+#define DIS if (show_dis && !cpu->rom_lock)
 
 struct daa_table_entry {
     int fc_before;
