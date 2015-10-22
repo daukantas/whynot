@@ -69,7 +69,15 @@ uint8_t GET8(cpu_t const *cpu, uint16_t addr) {
     } else if (addr < 0x4000) {
         return cpu->cart[addr];
     } else if (addr >= 0x4000 & addr < 0x8000) {
-        return cpu->cart[addr + (cpu->rom_bank_selected - 1) * 0x4000];
+        switch (cpu->mbc) {
+        case 0:
+            return cpu->cart[addr];
+        case 3:
+            return cpu->cart[addr + (cpu->rom_bank_selected) * 0x4000];
+        default:
+            fprintf(stderr, "what does an mbc do %02x\n", cpu->mbc);
+            exit(1);
+        }
     } else if (addr == 0xff11) {
         // NR11
         return cpu->nr11;
