@@ -817,6 +817,49 @@ int step(cpu_t *cpu) {
 
             cpu->fz = v == 0;
             return r == 0x6 ? 16 : 8;
+        } else if ((b & 0xf8) == 0x20) {
+            // SLA r
+            uint8_t r = b & 0x7;
+            DIS { printf("SLA %s\n", REG8N(r)); }
+            uint8_t v = REG8(cpu, r);
+
+            cpu->f = 0;
+            cpu->fc = (v & 0x80) == 0x80;
+            
+            v <<= 1;
+            SREG8(cpu, r, v);
+
+            cpu->fz = v == 0;
+            return r == 0x6 ? 16 : 8;
+        } else if ((b & 0xf8) == 0x28) {
+            // SRA r
+            uint8_t r = b & 0x7;
+            DIS { printf("SRA %s\n", REG8N(r)); }
+            uint8_t v = REG8(cpu, r);
+
+            cpu->f = 0;
+            cpu->fc = (v & 0x1) == 0x1;
+            
+            v >>= 1;
+            v |= ((v & 0x40) << 1);
+            SREG8(cpu, r, v);
+
+            cpu->fz = v == 0;
+            return r == 0x6 ? 16 : 8;
+        } else if ((b & 0xf8) == 0x38) {
+            // SRL r
+            uint8_t r = b & 0x7;
+            DIS { printf("SRL %s\n", REG8N(r)); }
+            uint8_t v = REG8(cpu, r);
+
+            cpu->f = 0;
+            cpu->fc = (v & 0x1) == 0x1;
+            
+            v >>= 1;
+            SREG8(cpu, r, v);
+
+            cpu->fz = v == 0;
+            return r == 0x6 ? 16 : 8;
         } else if ((b & 0xf8) == 0x30) {
             // SWAP r
             uint8_t r = b & 0x7;
