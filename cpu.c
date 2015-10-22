@@ -692,6 +692,16 @@ int step(cpu_t *cpu) {
 
             cpu->fz = v == 0;
             return r == 0x6 ? 16 : 8;
+        } else if ((b & 0xf8) == 0x30) {
+            // SWAP r
+            uint8_t r = b & 0x7;
+            DIS { printf("SWAP %s\n", REG8N(r)); }
+
+            uint8_t v = REG8(cpu, r);
+            v = (v >> 4) | (v << 4);
+            SREG8(cpu, r, v);
+
+            return r == 0x6 ? 16 : 8;
         } else if ((b & 0xc0) == 0x40) {
             // BIT b,r
             uint8_t bit = (b >> 3) & 0x7,
