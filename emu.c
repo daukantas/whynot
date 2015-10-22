@@ -279,14 +279,17 @@ void nr_step(cpu_t *cpu, FMOD_SYSTEM *system, int t) {
 void lcdc_step(cpu_t *cpu, SDL_Window *window, int t) {
     cpu->lcdc_modeclock += t;
 
-    if (cpu->lcdc_mode == 0 && cpu->lcdc_modeclock >= 204) {
+    uint8_t mode = cpu->lcdc_mode & 0x3;
+    uint8_t old_bits = cpu->lcdc_mode & 0xfc;
+
+    if (mode == 0 && cpu->lcdc_modeclock >= 204) {
         // hblank
         //
         cpu->lcdc_modeclock = 0;
         ++cpu->lcdc_line;
 
         if (cpu->lcdc_line == 143) {
-            cpu->lcdc_mode = 1;  // vblank
+            cpu->lcdc_mode = old_bits | 1;  // vblank
             did_vblank = 1;
             ++total_vblanks;
 
@@ -313,28 +316,28 @@ void lcdc_step(cpu_t *cpu, SDL_Window *window, int t) {
             glMatrixMode(GL_MODELVIEW);
             glLoadIdentity();
         } else {
-            cpu->lcdc_mode = 2;  // OAM read
+            cpu->lcdc_mode = old_bits | 2;  // OAM read
         }
-    } else if (cpu->lcdc_mode == 1 && cpu->lcdc_modeclock >= 456) {
+    } else if (mode == 1 && cpu->lcdc_modeclock >= 456) {
         // vblank
         //
         cpu->lcdc_modeclock = 0;
         ++cpu->lcdc_line;
 
         if (cpu->lcdc_line > 153) {
-            cpu->lcdc_mode = 2;  // OAM read
+            cpu->lcdc_mode = old_bits | 2;  // OAM read
             cpu->lcdc_line = 0;
         }
-    } else if (cpu->lcdc_mode == 2 && cpu->lcdc_modeclock >= 80) {
+    } else if (mode == 2 && cpu->lcdc_modeclock >= 80) {
         // OAM read
         //
         cpu->lcdc_modeclock = 0;
-        cpu->lcdc_mode = 3;  // VRAM read
-    } else if (cpu->lcdc_mode == 3 && cpu->lcdc_modeclock >= 172) {
+        cpu->lcdc_mode = old_bits | 3;  // VRAM read
+    } else if (mode == 3 && cpu->lcdc_modeclock >= 172) {
         // VRAM read
         //
         cpu->lcdc_modeclock = 0;
-        cpu->lcdc_mode = 0;  // hblank
+        cpu->lcdc_mode = old_bits | 0;  // hblank
 
         // render scanline
         
