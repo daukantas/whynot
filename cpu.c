@@ -897,6 +897,13 @@ int step(cpu_t *cpu) {
         }
 
         return 4;
+    } else if (b == 0x2f) {
+        // CPL
+        DIS { printf("CPL\n"); }
+        cpu->fh = 0;
+        cpu->fn = 0;
+        cpu->a = ~cpu->a;
+        return 4;
     } else if (b == 0x3f) {
         // CCF
         DIS { printf("CCF\n"); }
