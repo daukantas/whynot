@@ -291,6 +291,36 @@ uint16_t POP16(cpu_t *cpu) {
 static int show_dis = 0;
 #define DIS if (show_dis)
 
+struct daa_table_entry {
+    int fc_before;
+    int bit47_low;
+    int bit47_high;
+    int fh_before;
+    int bit03_low;
+    int bit03_high;
+    int add_a;
+    int set_fc;
+};
+
+struct daa_table_entry daa_add[9] = {
+    { 0, 0x0, 0x9, 0, 0x0, 0x9, 0x00, 0 },
+    { 0, 0x0, 0x8, 0, 0xa, 0xf, 0x06, 0 },
+    { 0, 0x0, 0x9, 1, 0x0, 0x3, 0x06, 0 },
+    { 0, 0xa, 0xf, 0, 0x0, 0x9, 0x60, 1 },
+    { 0, 0x9, 0xf, 0, 0xa, 0xf, 0x66, 1 },
+    { 0, 0xa, 0xf, 1, 0x0, 0x3, 0x66, 1 },
+    { 1, 0x0, 0x2, 0, 0x0, 0x9, 0x60, 1 },
+    { 1, 0x0, 0x2, 0, 0xa, 0xf, 0x66, 1 },
+    { 1, 0x0, 0x3, 1, 0x0, 0x3, 0x66, 1 },
+};
+
+struct daa_table_entry daa_sub[4] = {
+    { 0, 0x0, 0x9, 0, 0x0, 0x9, 0x00, 0 },
+    { 0, 0x0, 0x8, 1, 0x6, 0xf, 0xfa, 0 },
+    { 1, 0x7, 0xf, 0, 0x0, 0x9, 0xa0, 1 },
+    { 1, 0x6, 0xf, 1, 0x6, 0xf, 0x9a, 1},
+};
+
 int step(cpu_t *cpu) {
     DIS { printf("%04x: ", cpu->pc); }
 
@@ -817,6 +847,46 @@ int step(cpu_t *cpu) {
         cpu->pc = t * 8;
         // no flags set
         return 16;
+    } else if (b == 0x27) {
+        // DAA
+        DIS { printf("DAA\n"); }
+
+        cpu->fh = 0;
+
+        struct daa_table_entry *table;
+        int tablelen;
+        if (!cpu->fn) {
+            table = daa_add;
+            tablelen = 9;
+        } else {
+            table = daa_sub;
+            tablelen = 4;
+        }
+
+        uint8_t bit47 = cpu->a >> 4,
+                bit03 = cpu->a & 0xf;
+        int i;
+        for (i = 0; i < tablelen; ++i) {
+            if (
+                cpu->fc == table[i].fc_before &&
+                bit47 >= table[i].bit47_low &&
+                bit47 <= table[i].bit47_high &&
+                cpu->fh == table[i].fh_before &&
+                bit03 >= table[i].bit03_low &&
+                bit03 <= table[i].bit03_high
+            ) {
+                cpu->a += table[i].add_a;
+                cpu->fc = table[i].set_fc;
+                break;
+            }
+        }
+
+        if (i == tablelen) {
+            fprintf(stderr, "DAA hit wall on %02x\n", cpu->a);
+            exit(1);
+        }
+
+        return 4;
     } else if (b == 0x3f) {
         // CCF
         DIS { printf("CCF\n"); }
