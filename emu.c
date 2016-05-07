@@ -51,6 +51,12 @@ int read_file(char const *filename, uint8_t **out, long *len) {
 int main(int argc, char **argv) {
     uint8_t *rom, *cart;
     long romlen, cartlen;
+
+    if (argc == 1) {
+        fprintf(stderr, "usage: %s cart.gb\n", argv[0]);
+        return 1;
+    }
+
     read_file("DMG_ROM.bin", &rom, &romlen);
     read_file(argv[1], &cart, &cartlen);
 
